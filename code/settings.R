@@ -4,7 +4,7 @@ registerDoSNOW(cl)
 epoch=1
 
 # neighbors and lags
-var_list <- c("level"
+var_list <- c("pheno", "env"
 )
 vars <- 1:length(var_list)
 
@@ -25,10 +25,16 @@ for (i in 1:length(vars)) {
   if (var_list[vars[i]]  %in% c("doy", "gccmean")) {
     lags[[i]] <- 1:1
   } # for doy
-  if (var_list[vars[i]]  =="level") {
+  if (var_list[vars[i]]  =="pheno") {
+    # lags[[i]] <- list()#list(1,2,3,4,5)
+    # for (period in 1:4) {
+    #   lags[[i]] <-rlist::list.append(lags[[i]] ,(period-1)*7+1:7)
+    # }
+  }
+  if (var_list[vars[i]]  =="env") {
     lags[[i]] <- list()#list(1,2,3,4,5)
-    for (period in 1:4) {
-      lags[[i]] <-rlist::list.append(lags[[i]] ,(period-1)*7+1:7)
+    for (period in 1:26) {
+      lags[[i]] <-rlist::list.append(lags[[i]] ,(period-1)*14+1:14)
     }
   }
 }
@@ -54,8 +60,10 @@ rhomax <- 1-rhomin
 
 V_list<-vector(mode="list")
 for (v in 1:length(vars)){
-  for (i in 1:length(lags[[v]])) {
-    V_list <- rlist::list.append(V_list,0.1*exp(-(max(lags[[v]][[i]])/365)^2/5)) 
+  if (!is.null(lags[[v]])) {
+    for (i in 1:length(lags[[v]])) {
+      V_list <- rlist::list.append(V_list,0.1*exp(-(max(lags[[v]][[i]])/365)^2/5)) 
+    }
   }
 }
 V_phi<-unlist(V_list)
@@ -69,7 +77,7 @@ priors <- list(
   E_tau = 0.25^2,#0.25^2/2,
   V_tau = 5,
   E_gamma = 0,#1/10^2,
-  V_gamma = 5,
+  V_gamma = 0.5,
   E_rho = 1,
   V_rho = 0.5
 )
@@ -78,4 +86,4 @@ num_part <- 5
 
 num_epoch <- 1 #20
 
-basisnumber <-500 
+basisnumber <-800 

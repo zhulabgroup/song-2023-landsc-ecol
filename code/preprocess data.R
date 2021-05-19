@@ -2,17 +2,25 @@ x<-array(NA, dim= c(nrow(coord_df),length(date_list),length(var_list)),
          dimnames = list(as.character(1:nrow(coord_df)),
                          as.character(date_list),
                          var_list))
-for (j in 1:length(date_list)) { #time
+for (j in 1:length(date_list)) { #date
   for (v in 1:length(var_list)) { #covariate
-    if (var_list[v] %in% c("level")) {
-      level_date<-ts_all %>% filter(time==date_list[j])
-      if (nrow(level_date)>0) {
-        x[,j,v]<-level_date$level
+    if (var_list[v] %in% c("pheno")) {
+      pheno_date<-ts %>% filter(date==date_list[j])
+      if (nrow(pheno_date)>0) {
+        x[,j,v]<-pheno_date$pheno
       } else {
         x[,j,v]<-rep(NA, nrow(coord_df))
       }
     }
-    if (var_list[v]=="doy") {
+    else if (var_list[v] %in% c("env")) {
+      env_date<-ts %>% filter(date==date_list[j])
+      if (nrow(env_date)>0) {
+        x[,j,v]<-env_date$env
+      } else {
+        x[,j,v]<-rep(NA, nrow(coord_df))
+      }
+    }
+    else if (var_list[v]=="doy") {
       x[,j,v]<-rep(sin(as.numeric(format(date_list[j], "%j"))*2*pi), nrow(coord_df))
     }
   }
@@ -29,12 +37,20 @@ Sigma<-array(NA, dim= c(nrow(coord_df),length(date_list),length(var_list)),
              dimnames = list(as.character(1:nrow(coord_df)),
                              as.character(date_list),
                              var_list))
-for (j in 1:length(date_list)) { #time
+for (j in 1:length(date_list)) { #date
   for (v in 1:length(var_list)) { #covariate
-    if (var_list[v] %in% c("level")) {
-      level_date<-ts_all %>% filter(time==date_list[j])
-      if (nrow(level_date)>0) {
-        Sigma[,j,v]<-(level_date$level_sd)^2
+    if (var_list[v] %in% c("pheno")) {
+      pheno_date<-ts %>% filter(date==date_list[j])
+      if (nrow(pheno_date)>0) {
+        Sigma[,j,v]<-(pheno_date$pheno_sd)^2
+      } else {
+        Sigma[,j,v]<-rep(NA, nrow(coord_df))
+      }
+    }
+    else if (var_list[v] %in% c("env")) {
+      env_date<-ts %>% filter(date==date_list[j])
+      if (nrow(env_date)>0) {
+        Sigma[,j,v]<-(env_date$env_sd)^2
       } else {
         Sigma[,j,v]<-rep(NA, nrow(coord_df))
       }
@@ -59,10 +75,9 @@ for (j in 1:length(date_list)) { #time
 # }
 
 ### to percentage###
-date_id<-1:length(seq(min(ts_all$time),max(ts_all$time), by = 1))  #using percentile in NEON data
 df_upper_lower<-vector(mode="list")
 for(j in 1:length(var_list)) {
-  if (var_list[j]%in% c("level")) {
+  if (var_list[j]%in% c("pheno")) {
     df_upper_lower[[j]]<-data.frame(x[,,j,drop=F]) %>% 
       mutate(site=row_number()) %>% 
       gather(key="date", value = "value",-site) %>% 
@@ -79,7 +94,7 @@ for(j in 1:length(var_list)) {
       dplyr::summarize(lower=quantile(value, 0.025),
                        upper=quantile(value, 0.975)) %>% 
       mutate(range=upper-lower)
-    df_upper_lower[[j]]<-data.frame(x[,,j]) %>% 
+    df_upper_lower[[j]]<-data.frame(x[,,j,drop=F]) %>% 
       mutate(site=row_number()) %>% 
       gather(key="date", value = "value",-site) %>% 
       drop_na() %>% 
@@ -145,11 +160,11 @@ for(j in 1:length(var_list)) {
 # }
 # # 
 # export_path<-paste0(path,"processed")
-dir.create(paste0(path, "scaling/"))
-for (j in 1:length(var_list)) {
-  write_csv(df_upper_lower[[j]], paste0(path, "scaling/", j, ".csv"))
-  print(j)
-}
+# dir.create(paste0(path, "scaling/"))
+# for (j in 1:length(var_list)) {
+#   write_csv(df_upper_lower[[j]], paste0(path, "scaling/", j, ".csv"))
+#   print(j)
+# }
 # for (i in 1:nrow(coord_df)) {
 #   write_csv(as.data.frame(x[i,,]), paste0(export_path, "/", i, ".csv"))
 #   print(i)
@@ -179,35 +194,3 @@ for (j in 1:length(var_list)) {
 #     }
 #   }
 # }
-
-#### visualize time series
-df_list<-vector(mode="list", length(var_list))
-for (i in 1:length(var_list)) {
-  df_list[[i]]<-as.data.frame(x[,,i]) %>% 
-    mutate(site=1:nrow(coord_df)) %>% 
-    gather(key = "date", value="value", -site) %>% 
-    mutate(var=var_list[i]) %>% 
-    mutate(date=as.Date(date))
-}
-df<-bind_rows(df_list)
-
-var_df_list<-vector(mode="list", length(var_list))
-for (i in 1:length(var_list)) {
-  var_df_list[[i]]<-as.data.frame(Sigma[,,i]) %>% 
-    mutate(site=1:nrow(coord_df)) %>% 
-    gather(key = "date", value="value", -site) %>% 
-    mutate(var=var_list[i]) %>% 
-    mutate(date=as.Date(date))
-}
-var_df<-bind_rows(var_df_list)
-
-df<-left_join(df,var_df, by=c("site", "date", "var")) %>% 
-  dplyr::rename(value=value.x, variance=value.y) %>% 
-  mutate(lower=value-1.96*sqrt(variance),
-         upper=value+1.96*sqrt(variance))
-
-ggplot(df %>% filter(var=="gcc") )+
-  geom_line(aes(x=date, y=value))+
-  geom_ribbon(aes(x=date, ymin=lower, ymax=upper), fill="blue", alpha=0.5)+
-  theme_classic()+
-  facet_wrap(~site*var)

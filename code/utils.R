@@ -1,19 +1,59 @@
 library(tidyverse)
-library(phenocamapi)
 library(LaplacesDemon)
-library(doSNOW)
-library(EML)
+# library(doSNOW)
 library(lubridate)
+library(gridExtra)
+library(xts)
 
-compare_stats<-function ( obs_ori, pred_ori,obs=NULL,pred=NULL) {
-  corr<-cor(obs_ori, pred_ori)
+waves<-function (t, t_start,
+                 intercept, slope, 
+                 amplitude1, phase1, period1,
+                 amplitude2, phase2, period2,
+                 sd) {
+  # d<-as.integer(format(t, "%j"))
+  t_diff<-as.numeric(t-t_start)
+  if (leap_year(t)) {d_all<-366} else {d_all<-365}
+  v <- intercept + slope* t_diff+
+    amplitude1 * sin(2*pi/(period1*d_all) *(t_diff+phase1)) + 
+    amplitude2 * sin(2*pi/(period2*d_all) *(t_diff+phase2)) + 
+    rnorm (1,0,sd)
+  
+  return (v)
+}
+
+env_to_param<-function (env, lower, upper, steepness, midpoint) {
+  param<-(upper-lower)/(1+exp(-steepness*(env-midpoint)))+lower
+  return(param)
+}
+  
+double_logistics<-function (t, m1, m2, m3, m4, m5, m6, m7, m8=1, sd) {
+  if (!leap_year(t)) {
+    d<-(as.integer(format(t, "%j")) %% (365/round(m8)))*round(m8)
+  } else {
+    d<-(as.integer(format(t, "%j")) %% (366/round(m8)))*round(m8)
+  }
+  
+  
+  v <- m1 + (m2-m7*d)*(1/(1+exp((m3-d)/m4))-1/(1+exp((m5-d)/m6))) + rnorm (1,0,sd)
+  
+  return (v)
+}
+
+compare_stats<-function ( obs_ori, pred_ori,obs=NULL,pred=NULL, range=NULL) {
+  corr<-cor(obs_ori, pred_ori, use="pairwise.complete.obs")
   R2<-summary(lm(pred_ori~obs_ori))$r.squared
+  RMSE<-sqrt(mean((obs_ori-pred_ori)^2, na.rm=T))
+  
   if(!is.null(obs)) {
     nRMSE<-sqrt(mean((obs-pred)^2, na.rm=T))
-  } else {
+  } 
+  else if (!is.null (range)) {
+    nRMSE <- RMSE / range
+  }
+  else {
     nRMSE<-NA
   }
-  RMSE<-sqrt(mean((obs_ori-pred_ori)^2, na.rm=T))
+  
   out<-list(corr=corr, R2=R2, nRMSE=nRMSE, RMSE=RMSE)
   return(out)
 }
@@ -81,9 +121,9 @@ tdistMat_df<-as.data.frame(tdistMat) %>%
   mutate(doy1=as.integer(doy1),
          doy2=as.integer(doy2))
 
-ggplot(tdistMat_df,aes(x=doy1, y=doy2))+
-  geom_raster(aes(fill=value))+
-  scale_fill_viridis_c()
+# ggplot(tdistMat_df,aes(x=doy1, y=doy2))+
+  # geom_raster(aes(fill=value))+
+  # scale_fill_viridis_c()
 
 date2doy<-function (x){
   doy_all<-matrix(NA, nrow=nrow(x), ncol=1)
@@ -115,12 +155,7 @@ PrepareEmbedding<-function(x,start, end, focalsites=NULL, lags, neighbors, vars,
       for (n in 1:length(neighbors[[v]])) {
         neighbor<-neighbors[[v]][n]
         site<-Ind[neighbor]
-        if (var == "evimean") {
-          Xi_add<-as.matrix(x[site,(start):(end),var])
-          colnames(Xi_add)<-paste0(var,"_",neighbor,"_",1)
-          Xi<-cbind(Xi, Xi_add)
-        }
-        else {
+        if (!is.null(lags[[v]])) {
           for (period in 1:length(lags[[v]])) {
             period_lags<-lags[[v]][[period]]
             values<-matrix(NA, nrow=end-start+1, ncol=length(period_lags))

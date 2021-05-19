@@ -1,14 +1,14 @@
 P_fit<-as.matrix(1:nrow(coord_df))
 
 
-obs_df<-as.data.frame(x[P_fit,,1, drop=F]) %>%
-  as_tibble() %>% 
-  mutate(site=P_fit) %>%
-  gather(key="date", value="y", -site) %>% 
-  mutate(date=as.Date(date))
-obs_df_ori<-obs_df %>% 
-  left_join(df_upper_lower[[1]], by="site")%>% 
-  mutate(y=y*range+lower)
+# obs_df<-as.data.frame(x[P_fit,,1, drop=F]) %>%
+#   as_tibble() %>% 
+#   mutate(site=P_fit) %>%
+#   gather(key="date", value="y", -site) %>% 
+#   mutate(date=as.Date(date))
+# obs_df_ori<-obs_df %>% 
+#   left_join(df_upper_lower[[1]], by="site")%>% 
+#   mutate(y=y*range+lower)
 
 ######
 fit_start<-max(unlist(lags))
@@ -22,10 +22,12 @@ D_fit <- date_list[(fit_start + 1):(fit_start + steps)] %>%
 xnew <- x
 Sigmanew <- Sigma
 
+step_groups<-split(seq(1:steps) ,ceiling(seq(1:steps) / 100))
+
 Y_fit<-Var_fit<-matrix(NA, nrow=nrow(P_fit), ncol = steps )      
-for (t in 1:steps) {
-  
-  res<-PrepareEmbedding(x,start=fit_start+t,end=fit_start+t, focalsites = P_fit, lags=lags, neighbors=neighbors,vars=vars, distMat = distMat)
+for (g in 1:length(step_groups)) {
+  t<-step_groups[[g]]
+  res<-PrepareEmbedding(x,start=fit_start+min(t),end=fit_start+max(t), focalsites = P_fit, lags=lags, neighbors=neighbors,vars=vars, distMat = distMat)
   newX<-res$X
   newP<-res$P
   newD<-res$D
@@ -35,46 +37,57 @@ for (t in 1:steps) {
     newX<-newX[-missing_id,,drop=F]
     newP<-newP[-missing_id,,drop=F]
     newD<-newD[-missing_id,,drop=F]
-  }
-  res<-PrepareEmbedding(Sigma,start=fit_start+t,end=fit_start+t, focalsites = P_fit, lags=lags, neighbors=neighbors,vars=vars, distMat = distMat)
-  newSigma<-res$X
-  if (length(missing_id)>0) {
-    newSigma<-newSigma[-missing_id,,drop=F]
+    t<-t[-missing_id]
   }
   
-  Y_fit_all<-
-    foreach (i=1:num_part,
-             .export = c( 
-               "xnew","Sigmanew",
-               "GPSDM","res"
-             ),
-             .packages = c("tidyverse","RhpcBLASctl")
-    ) %dopar% {
-      blas_set_num_threads(1)
-      omp_set_num_threads(1)
-      particle_pick <- pars[, i, drop = F]
-      res <- GPSDM(pars = particle_pick, distMat = distMat, basisX = X_basis, basisP = P_basis,basisD = D_basis, basisY = Y_basis, newX = newX, newP = newP,newD = newD, newSigma=newSigma, mode = c("predict"))
-      cbind(res$mt, res$Ct)
+  if (nrow(newX)>0) {
+    res<-PrepareEmbedding(Sigma,start=fit_start+min(t),end=fit_start+max(t), focalsites = P_fit, lags=lags, neighbors=neighbors,vars=vars, distMat = distMat)
+    newSigma<-res$X
+    if (length(missing_id)>0) {
+      newSigma<-newSigma[-missing_id,,drop=F]
     }
-  for(i in 1:nrow(newP)) {
-    means<-variances<-c()
-    for (j in 1:num_part) {
-      means<-cbind(means,Y_fit_all[[j]][i,1])
-      variances<-cbind(variances,Y_fit_all[[j]][i,2])
-    }
-    means<-matrix(means)
-    variances<-matrix(variances)
-    weighted_mean<-weighted.mean(means,w=exp(log_p-mean(log_p)))
-    weighted_variance<-weighted.mean(variances, w=exp(log_p-mean(log_p)))+Hmisc::wtd.var(means,weights=exp(log_p-mean(log_p)), normwt = T)
-    #store prediction
-    Y_fit[newP[i,1],t]<-weighted_mean
-    Var_fit[newP[i,1],t]<-weighted_variance
     
-    xnew[newP[i,1],(fit_start+t),1]<-weighted_mean
-    Sigmanew[newP[i,1],(fit_start+t),1]<-weighted_variance
+    Y_fit_all<-
+      foreach (i=1:num_part,
+               .export = c( 
+                 "xnew","Sigmanew",
+                 "GPSDM"
+               )#,
+               # .packages = c("tidyverse","RhpcBLASctl")
+      ) %dopar% {
+        library(tidyverse, lib.loc = "/usr/lib64/R/library")
+        library(RhpcBLASctl, lib.loc = "/usr/lib64/R/library")
+        blas_set_num_threads(1)
+        omp_set_num_threads(1)
+        particle_pick <- pars[, i, drop = F]
+        res <- GPSDM(pars = particle_pick, distMat = distMat, basisX = X_basis, basisP = P_basis,basisD = D_basis, basisY = Y_basis, newX = newX, newP = newP,newD = newD, newSigma=newSigma, mode = c("predict"))
+        cbind(res$mt, res$Ct)
+      }
+    
+    for(s in 1:nrow(P_fit)) {
+      means<-variances<-c()
+      for (i in 1:num_part) {
+        means<-cbind(means,Y_fit_all[[i]][newP==s,1])
+        variances<-cbind(variances,Y_fit_all[[i]][newP==s,2])
+      }
+      res_df<-bind_rows(as.data.frame(means) %>% mutate(stat="means") %>% mutate(t=row_number()) ,
+      as.data.frame(variances) %>% mutate(stat="variances") %>% mutate(t=row_number()))%>% 
+        gather(key="particle", value="value",-t,-stat) %>% 
+        spread(key="stat", value="value") %>% 
+        group_by(t) %>% 
+        summarize(weighted_mean=weighted.mean(means,w=exp(log_p-mean(log_p))),
+                  weighted_variance=weighted.mean(variances, w=exp(log_p-mean(log_p)))+Hmisc::wtd.var(means,weights=exp(log_p-mean(log_p)), normwt = T))
+      
+      #store prediction
+      Y_fit[P_fit[s,1],t]<-res_df$weighted_mean
+      Var_fit[P_fit[s,1],t]<-res_df$weighted_variance
+      
+      xnew[P_fit[s,1],(fit_start+t),1]<-res_df$weighted_mean
+      Sigmanew[P_fit[s,1],(fit_start+t),1]<-res_df$weighted_variance
+    }
   }
   
-  print(t)
+  print(g)
 }
 
 
@@ -104,18 +117,14 @@ fit_df_ori<-fit_df %>%
          upper=(upper+0.5)*range+lower.scale,
          lower=(lower+0.5)*range+lower.scale)
 
+# 
+# combined_df<-obs_df %>% 
+#   left_join(fit_df, by=c("site", "date")) %>% 
+#   drop_na()
+# combined_df_ori<-obs_df_ori %>% 
+#   dplyr::select(-lower, -upper,-range)%>% 
+#   left_join(fit_df_ori, by=c("site", "date")) %>% 
+#   dplyr::select(-lower.scale, -upper.scale,-range) %>% 
+#   drop_na()
 
-combined_df<-obs_df %>% 
-  left_join(fit_df, by=c("site", "date")) %>% 
-  drop_na()
-combined_df_ori<-obs_df_ori %>% 
-  dplyr::select(-lower, -upper,-range)%>% 
-  left_join(fit_df_ori, by=c("site", "date")) %>% 
-  dplyr::select(-lower.scale, -upper.scale,-range) %>% 
-  drop_na()
 
-ggplot()+
-  geom_line(data=ts_all, aes(x=time, y=level))+
-  geom_line(data=fit_df_ori, aes(x=date, y=value), col="blue")+
-  geom_ribbon(data=fit_df_ori, aes(x=date, ymin=lower, ymax=upper), fill="blue",alpha=0.25)+
-  theme_classic()
