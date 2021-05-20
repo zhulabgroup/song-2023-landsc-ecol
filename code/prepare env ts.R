@@ -28,16 +28,22 @@ ts_all<-
                     amplitude2 = 0.5,
                     phase2 = 0,
                     period2 = 5,
-                    sd = 0.05
+                    sd = env_sd
       )
       # print(i)
     }
-    ts_site<-data.frame(date=date_list, env=env, env_sd=0.05)%>% 
+    ts_site<-data.frame(date=date_list, env=env, env_sd=env_sd)%>% 
       mutate(year=as.numeric(format(date, "%Y"))) %>% 
       mutate(site=s)
     ts_site
   }
 ts_all<-bind_rows(ts_all)
-# ggplot(ts_all)+
+
+# p<-
+#   ggplot(ts_all)+
 #   geom_line(aes(x=date, y=env, group=site, col=site))+
-#   theme_classic()
+#   theme_classic()+
+#   theme(legend.position="right")
+# cairo_pdf("./figure/env.pdf", width = 11, height=4)
+# print (p)
+# dev.off()

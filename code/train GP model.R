@@ -40,7 +40,7 @@ if (basisnumber==nrow(X_all)) {
 } else {
   J_all<-date2doy(D_all)
   set.seed(42)
-  cluster <- kmeans(cbind(P_all,J_all,X_all), basisnumber )
+  cluster <- kmeans(cbind(P_all,J_all,X_all, Y_all), basisnumber )
   cluster_id_sort <- seq(basisnumber )[order(cluster$size, decreasing = T)]
   basis_id <- rep(NA, basisnumber)
   for (i in 1:basisnumber) {
@@ -108,7 +108,7 @@ if (epoch > 1) {
       }
       print("start")
       
-      fmingrad_Rprop(lpost, pars_prev[, i, drop = F] + matrix(rnorm(ndim + 3, 0, 0.1)), sample_n = min(nrow(X_train),100), maxcount = 200)
+      fmingrad_Rprop(lpost, pars_prev[, i, drop = F] + matrix(rnorm(ndim + 3, 0, 0.1)), sample_n = min(nrow(X_train),100), maxcount = maxcount)
     }
   
   ########################
@@ -135,7 +135,7 @@ if (epoch > 1) {
       blas_set_num_threads(1)
       omp_set_num_threads(1)
       
-      num_sample <- 50
+      # num_sample <- 50
       pars_sample <- pars_prev_updated[, i, drop = F] %*% matrix(1, nrow = 1, ncol = num_sample) + t(rmvn(num_sample, mu = rep(0, ndim + 3), Sigma = diag(1, nrow = ndim + 3, ncol = ndim + 3)))
       loglik_res <- rep(NA, num_sample)
       
@@ -213,7 +213,7 @@ Rprop_res_add <-
     }
     print("start")
     
-    fmingrad_Rprop(lpost, pars_add[, i, drop = F] + matrix(rnorm(ndim + 4, 0, 0.1)), sample_n = min(nrow(X_train),50), maxcount = 200)
+    fmingrad_Rprop(lpost, pars_add[, i, drop = F] + matrix(rnorm(ndim + 4, 0, 0.1)), sample_n = min(nrow(X_train),50), maxcount = maxcount)
   }
 
 pars_add_updated <- matrix(NA, nrow = ndim + 4, ncol = num_part)
@@ -238,7 +238,7 @@ pars_var_add_updated <-
     blas_set_num_threads(1)
     omp_set_num_threads(1)
     
-    num_sample <- 50
+    # num_sample <- 50
     pars_sample <- pars_add_updated[, i, drop = F] %*% matrix(1, nrow = 1, ncol = num_sample) + t(rmvn(num_sample, mu = rep(0, ndim + 4), Sigma = diag(1, nrow = ndim + 4, ncol = ndim + 4)))
     loglik_res <- rep(NA, num_sample)
     

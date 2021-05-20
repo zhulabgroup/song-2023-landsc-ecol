@@ -13,7 +13,7 @@ param_all<-
                                    upper=1,
                                    steepness=-3,
                                    midpoint=0.5)) %>% 
-        mutate(param_mis = if_else((year<=midyear),param,param+0.2)) %>%
+        mutate(param_mis = case_when((year>midyear)~param+0.1)) %>%
         mutate(site=s)
     }
     if (param == "m3") {
@@ -28,9 +28,9 @@ param_all<-
         mutate(param=env_to_param (env=env_summ,
                                    lower=40,
                                    upper=160,
-                                   steepness=-3,
+                                   steepness=-2,
                                    midpoint=1)) %>% 
-        mutate(param_mis = if_else((year<=midyear),param,param+20)) %>%
+        mutate(param_mis = case_when((year>midyear)~param+20)) %>%
         mutate(site=s)
     }
     if (param == "m4") {
@@ -45,9 +45,9 @@ param_all<-
         mutate(param=env_to_param (env=env_summ,
                                    lower=0,
                                    upper=80,
-                                   steepness=2,
+                                   steepness=3.5,
                                    midpoint=1.2)) %>% 
-        mutate(param_mis = if_else((year<=midyear),param,param-15)) %>%
+        mutate(param_mis = case_when((year>midyear)~param-15)) %>%
         mutate(site=s)
     }
     if (param == "m5") {
@@ -63,7 +63,7 @@ param_all<-
                                    upper=280,
                                    steepness=-1,
                                    midpoint=0.8)) %>% 
-        mutate(param_mis = if_else((year<=midyear),param,param+0.2)) %>%
+        mutate(param_mis = case_when((year>midyear)~param+0.2)) %>%
         mutate(site=s)
     }
     if (param =="m8") {

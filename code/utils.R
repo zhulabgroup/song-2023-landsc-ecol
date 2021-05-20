@@ -10,7 +10,7 @@ waves<-function (t, t_start,
                  intercept, slope, 
                  amplitude1, phase1, period1,
                  amplitude2, phase2, period2,
-                 sd) {
+                 sd=0.05) {
   # d<-as.integer(format(t, "%j"))
   t_diff<-as.numeric(t-t_start)
   if (leap_year(t)) {d_all<-366} else {d_all<-365}
@@ -226,11 +226,11 @@ fmingrad_Rprop<-function (fun, xinit, sample_n, maxcount) {
   s <- sqrt(t(g)%*%g)
   
   # loop starts here
-  count <- 0
+  count <- 1
   del <- Delta0
   df <- 10
   
-  while ((s>.0001)&(count<maxcount)&(df>.0000001)) {
+  while ((s>.0001)&(count<=maxcount)&(df>.0000001)) {
     # while (count<maxcount) {
     
     # step 1-move
@@ -249,9 +249,9 @@ fmingrad_Rprop<-function (fun, xinit, sample_n, maxcount) {
     x<-xnew
     g<-gnew
     f<-fnew
-    count<-count+1
-    if (count%%10==0) {seed<-seed+1}
     print (paste0(count,", ",seed, ", ",x[nrow(x),]))
+    count<-count+1
+    if (count%%10==1) {seed<-seed+1}
   }
   
   res<-fun(x, sample_n,seed)

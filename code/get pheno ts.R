@@ -14,27 +14,47 @@ pheno_all<-
       for (i in 1:length(date_list_year)) {
         date<-date_list_year[i]
         if (param == "m2") {
-          pheno[i]<-double_logistics(date,m2=param_site$param[y] )
-          pheno_mis[i]<-double_logistics(date,m2=param_site$param_mis[y])
+          pheno[i]<-double_logistics(date,
+                                     m2=param_site$param[y],
+                                     sd=pheno_sd)
+          pheno_mis[i]<-double_logistics(date,
+                                         m2=param_site$param_mis[y],
+                                         sd=pheno_sd)
         }
         if (param == "m3") {
-          pheno[i]<-double_logistics(date,m3=param_site$param[y] )
-          pheno_mis[i]<-double_logistics(date,m3=param_site$param_mis[y])
+          pheno[i]<-double_logistics(date,
+                                     m3=param_site$param[y],
+                                     sd=pheno_sd)
+          pheno_mis[i]<-double_logistics(date,
+                                         m3=param_site$param_mis[y],
+                                         sd=pheno_sd)
         }
         if (param == "m4") {
-          pheno[i]<-double_logistics(date,m4=param_site$param[y] )
-          pheno_mis[i]<-double_logistics(date,m4=param_site$param_mis[y])
+          pheno[i]<-double_logistics(date,
+                                     m4=param_site$param[y],
+                                     sd=pheno_sd)
+          pheno_mis[i]<-double_logistics(date,
+                                         m4=param_site$param_mis[y],
+                                         sd=pheno_sd)
         }
         if (param == "m5") {
-          pheno[i]<-double_logistics(date,m5=param_site$param[y] )
-          pheno_mis[i]<-double_logistics(date,m5=param_site$param_mis[y])
+          pheno[i]<-double_logistics(date,
+                                     m5=param_site$param[y],
+                                     sd=pheno_sd)
+          pheno_mis[i]<-double_logistics(date,
+                                         m5=param_site$param_mis[y],
+                                         sd=pheno_sd)
         }
         if (param == "m8") {
-          pheno[i]<-double_logistics(date,m8=param_site$param[y] )
-          pheno_mis[i]<-double_logistics(date,m8=param_site$param_mis[y])
+          pheno[i]<-double_logistics(date,
+                                     m8=param_site$param[y],
+                                     sd=pheno_sd)
+          pheno_mis[i]<-double_logistics(date,
+                                         m8=param_site$param_mis[y],
+                                         sd=pheno_sd)
         }
       }
-      pheno_year<-data.frame(date=date_list_year, pheno=pheno,pheno_mis=pheno_mis, pheno_sd=0.05)
+      pheno_year<-data.frame(date=date_list_year, pheno=pheno,pheno_mis=pheno_mis, pheno_sd=pheno_sd)
       pheno_list[[y]]<-pheno_year
     }
     pheno_site<-bind_rows(pheno_list) %>% 
