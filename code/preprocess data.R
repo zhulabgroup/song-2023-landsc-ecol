@@ -159,12 +159,12 @@ for(j in 1:length(var_list)) {
 #   }
 # }
 # # 
-# export_path<-paste0(path,"processed")
-# dir.create(paste0(path, "scaling/"))
-# for (j in 1:length(var_list)) {
-#   write_csv(df_upper_lower[[j]], paste0(path, "scaling/", j, ".csv"))
-#   print(j)
-# }
+# export_path<-paste0(path,"scaling")
+dir.create(paste0(path, "scaling/"), recursive=T)
+for (j in 1:length(var_list)) {
+  write_csv(df_upper_lower[[j]], paste0(path, "scaling/", j, ".csv"))
+  print(j)
+}
 # for (i in 1:nrow(coord_df)) {
 #   write_csv(as.data.frame(x[i,,]), paste0(export_path, "/", i, ".csv"))
 #   print(i)

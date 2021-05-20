@@ -1,6 +1,3 @@
-cl <- makeCluster(5, outfile = "")
-registerDoSNOW(cl)
-
 epoch=1
 
 # neighbors and lags

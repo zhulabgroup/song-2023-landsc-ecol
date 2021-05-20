@@ -1,6 +1,5 @@
 P_fit<-as.matrix(1:nrow(coord_df))
 
-
 # obs_df<-as.data.frame(x[P_fit,,1, drop=F]) %>%
 #   as_tibble() %>% 
 #   mutate(site=P_fit) %>%
@@ -102,7 +101,7 @@ var_fit_df<-as.data.frame(Var_fit) %>%
   mutate(site=P_fit) %>% 
   gather(key="date", value="value",-site) %>% 
   mutate(date=as.Date(date))
-dir.create(paste0(path,"analyses"))
+dir.create(paste0(path,"analyses"),recursive = T)
 write_csv(fit_df,paste0(path,"analyses/fit.csv"))
 write_csv(var_fit_df,paste0(path,"analyses/var_fit.csv"))
 
@@ -117,14 +116,14 @@ fit_df_ori<-fit_df %>%
          upper=(upper+0.5)*range+lower.scale,
          lower=(lower+0.5)*range+lower.scale)
 
-# 
-# combined_df<-obs_df %>% 
-#   left_join(fit_df, by=c("site", "date")) %>% 
-#   drop_na()
-# combined_df_ori<-obs_df_ori %>% 
-#   dplyr::select(-lower, -upper,-range)%>% 
-#   left_join(fit_df_ori, by=c("site", "date")) %>% 
-#   dplyr::select(-lower.scale, -upper.scale,-range) %>% 
-#   drop_na()
+combine_df_ori<-ts_all %>% 
+  left_join(fit_df_ori %>% dplyr::select(date,site, value, lower, upper), by=c("date","site")) %>% 
+  mutate(mismatch_actual=case_when (year>midyear~pheno-pheno_mis),
+         mismatch_model=case_when (year<=midyear~ value-pheno,
+                                   year>midyear~value-pheno_mis),
+         mismatch_model_upper=case_when (year<=midyear~ upper-pheno,
+                                         year>midyear~upper-pheno_mis),
+         mismatch_model_lower=case_when (year<=midyear~ lower-pheno,
+                                         year>midyear~lower-pheno_mis))
 
 

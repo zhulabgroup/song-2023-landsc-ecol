@@ -1,9 +1,10 @@
 library(tidyverse)
 library(LaplacesDemon)
-# library(doSNOW)
+library(doSNOW)
 library(lubridate)
 library(gridExtra)
 library(xts)
+library(ggpubr)
 
 waves<-function (t, t_start,
                  intercept, slope, 
@@ -26,7 +27,17 @@ env_to_param<-function (env, lower, upper, steepness, midpoint) {
   return(param)
 }
   
-double_logistics<-function (t, m1, m2, m3, m4, m5, m6, m7, m8=1, sd) {
+double_logistics<-function (t,
+                            m1=0,# average greenness in winter
+                            m2=1, # difference between summer and winter
+                            m3=100, # spring onset
+                            m4=10, # slope of curve in spring
+                            m5=260, # fall offset
+                            m6=20, # slope of curve in fall
+                            m7=0, # summer greendown
+                            m8=1, #life cycle
+                            sd=0.05
+                            ) {
   if (!leap_year(t)) {
     d<-(as.integer(format(t, "%j")) %% (365/round(m8)))*round(m8)
   } else {

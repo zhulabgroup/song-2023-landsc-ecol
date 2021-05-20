@@ -1,5 +1,6 @@
-dir.create(paste0(path,"train"))
-res<-PrepareEmbedding(x,start=max(unlist(lags))+1,end=length(date_list), focalsites =1:nrow(coord_df), lags=lags, neighbors=neighbors,vars=vars, distMat = distMat)
+end_id<-which (date_list==as.Date(paste0(midyear+1,"-01-01"))-1)
+dir.create(paste0(path,"train"),recursive = T)
+res<-PrepareEmbedding(x,start=max(unlist(lags))+1,end=end_id, focalsites =1:nrow(coord_df), lags=lags, neighbors=neighbors,vars=vars, distMat = distMat)
 X_train<-res$X
 Y_train<-res$Y
 D_train<-res$D
