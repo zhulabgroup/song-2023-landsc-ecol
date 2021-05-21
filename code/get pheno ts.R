@@ -65,3 +65,8 @@ pheno_all<-bind_rows(pheno_all)
 
 ts_all<-ts_all %>% 
   left_join(pheno_all, by=c("date","site"))
+
+# ggplot(pheno_all)+
+#   geom_line(aes(x=date, y=pheno))+
+#   facet_wrap(.~site, ncol=1)+
+#   theme_classic()

@@ -43,7 +43,8 @@ p2<-
   theme_classic()+
   ylab("phenology")+
   theme(legend.position="bottom")+
-  facet_wrap(.~cat, ncol=1)
+  facet_wrap(.~cat, ncol=1)+
+  scale_color_viridis_c(direction=-1)
 
 colors <- c("m" = "blue",
             "m with mismatch" = "red")
@@ -67,27 +68,33 @@ p4<-
   geom_line(aes(x=date, y=pheno, col="simulated phenology"),alpha=0.5)+
   geom_line( aes(x=date, y=pheno_mis, col="simulated phenology with mismatch"), alpha=0.5)+
   geom_line(aes(x=date, y=value, col="predicted phenology"))+
-  geom_ribbon(aes(x=date, ymin=lower, ymax=upper), fill="black",alpha=0.25)+
+  geom_ribbon(aes(x=date, ymin=lower, ymax=upper, fill="predicted phenology"),alpha=0.25)+
   theme_classic()+
   geom_vline(xintercept =as.Date(paste0(midyear+1,"-01-01") ), alpha=0.5)+
   scale_color_manual(values = colors)+
+  scale_fill_manual(values = colors)+
+  guides(fill=F)+
   labs(x = "date",
        y = "phenology",
        color = "") +
   theme(legend.position="top") 
 
-colors <- c("simulated mismatch" = "red",
-            "estimated mismatch" = "black")
+colors <- c("simulated mismatch" = "purple",
+            "estimated mismatch" = "dark red",
+            "predictive error" = "dark blue")
 p5<-
   ggplot(combine_df_ori %>% filter(site==3))+
   geom_line(aes(x=date, y=mismatch_actual, col="simulated mismatch"),alpha=0.5)+
   geom_line( aes(x=date, y=mismatch_model, col="estimated mismatch"), alpha=0.5)+
-  geom_ribbon(aes(x=date, ymin=mismatch_model_lower, ymax=mismatch_model_upper), fill="black",alpha=0.25)+
+  geom_line( aes(x=date, y=pred_error, col="predictive error"), alpha=0.5)+
+  geom_ribbon(aes(x=date, ymin=mismatch_model_lower, ymax=mismatch_model_upper, fill="estimated mismatch"),alpha=0.25)+
   theme_classic()+
   geom_vline(xintercept =as.Date(paste0(midyear+1,"-01-01") ), alpha=0.5)+
   scale_color_manual(values = colors)+
+  scale_fill_manual(values = colors)+
+  guides(fill=F)+
   labs(x = "date",
-       y = "mismatch",
+       y = "deviation",
        color = "") +
   theme(legend.position="top") 
 
@@ -117,13 +124,16 @@ dygraph(vis_ts) %>%
   dyRangeSelector()
 
 
-vis_df<-combine_df_ori %>% filter(site==3) %>% dplyr::select(date, mismatch_actual, mismatch_model, mismatch_model_upper, mismatch_model_lower)
+vis_df<-combine_df_ori %>% filter(site==3) %>% dplyr::select(date, mismatch_actual, mismatch_model, mismatch_model_upper, mismatch_model_lower,pred_error)
 act_mis_ts <- xts(vis_df$mismatch_actual,vis_df$date) 
 est_mis_ts <- xts(vis_df$mismatch_model,vis_df$date) 
 est_mis_ts_upper <- xts(vis_df$mismatch_model_upper,vis_df$date) 
 est_mis_ts_lower <- xts(vis_df$mismatch_model_lower,vis_df$date) 
-vis_ts <- cbind(act_mis_ts, est_mis_ts,est_mis_ts_upper, est_mis_ts_lower)
+pred_err_ts <- xts(vis_df$pred_error,vis_df$date) 
+vis_ts <- cbind(act_mis_ts, est_mis_ts,est_mis_ts_upper, est_mis_ts_lower,pred_err_ts)
 dygraph(vis_ts) %>% 
-  dySeries("act_mis_ts", label = "simulated mismatch", col="red") %>%
-  dySeries(c("est_mis_ts_lower","est_mis_ts","est_mis_ts_upper"), label = "estimated mismatch", col="black") %>%
+  dySeries("act_mis_ts", label = "simulated mismatch", col="purple") %>%
+  dySeries(c("est_mis_ts_lower","est_mis_ts","est_mis_ts_upper"), label = "estimated mismatch", col="darkred") %>%
+  dySeries("pred_err_ts", label = "predictive error", col="darkblue") %>%
   dyRangeSelector()
+

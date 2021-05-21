@@ -77,7 +77,7 @@ param_all<-
         mutate(param=env_to_param (env=env_summ,
                                    lower=1.2,
                                    upper=2.2,
-                                   steepness=8,
+                                   steepness=3,
                                    midpoint=1.5)) %>% 
         mutate(param_mis = case_when((year>midyear)~param-0.5)) %>%
         mutate(site=s)

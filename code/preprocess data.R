@@ -91,8 +91,10 @@ for(j in 1:length(var_list)) {
       mutate(site=row_number()) %>% 
       gather(key="date", value = "value",-site) %>% 
       drop_na() %>% 
-      dplyr::summarize(lower=quantile(value, 0.025),
-                       upper=quantile(value, 0.975)) %>% 
+      # dplyr::summarize(lower=quantile(value, 0.025),
+                       # upper=quantile(value, 0.975)) %>% 
+      dplyr::summarize(lower=quantile(value, 0),
+                       upper=quantile(value, 1)) %>% 
       mutate(range=upper-lower)
     df_upper_lower[[j]]<-data.frame(x[,,j,drop=F]) %>% 
       mutate(site=row_number()) %>% 

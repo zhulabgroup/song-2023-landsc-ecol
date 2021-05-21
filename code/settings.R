@@ -74,20 +74,20 @@ priors <- list(
   E_tau = 0.25^2,#0.25^2/2,
   V_tau = 5,
   E_rho = 1,
-  V_rho = 5,
+  V_rho = 0.5,
   E_gamma = 0,#1/10^2,
-  V_gamma = 5
+  V_gamma = 0.5
 )
 
 num_part <- 5
 
 num_epoch <- 1 #20
 
-basisnumber <-1000 
+basisnumber <-5000 
 
 maxcount<-100
 
 num_sample<-10
 
-env_sd<-0.05
-pheno_sd <- 0.05
+env_sd<-0.01
+pheno_sd <- 0.01

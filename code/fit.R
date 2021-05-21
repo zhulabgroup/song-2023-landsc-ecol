@@ -118,12 +118,10 @@ fit_df_ori<-fit_df %>%
 
 combine_df_ori<-ts_all %>% 
   left_join(fit_df_ori %>% dplyr::select(date,site, value, lower, upper), by=c("date","site")) %>% 
-  mutate(mismatch_actual=case_when (year>midyear~pheno-pheno_mis),
-         mismatch_model=case_when (year<=midyear~ value-pheno,
-                                   year>midyear~value-pheno_mis),
-         mismatch_model_upper=case_when (year<=midyear~ upper-pheno,
-                                         year>midyear~upper-pheno_mis),
-         mismatch_model_lower=case_when (year<=midyear~ lower-pheno,
-                                         year>midyear~lower-pheno_mis))
+  mutate(mismatch_actual=pheno-pheno_mis,
+         mismatch_model=value-pheno_mis,
+         mismatch_model_upper=upper-pheno_mis,
+         mismatch_model_lower=lower-pheno_mis,
+         pred_error=case_when (year<=midyear~value-pheno))
 
 
