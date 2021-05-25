@@ -24,7 +24,8 @@ p1<-
   geom_line(aes(x=env_summ, y=param), col="blue")+
   # geom_line(aes(x=env_summ, y=param_mis), col="red")+
   theme_classic()+
-  ylab("m")
+  labs(x=env_name[[param]],
+       y=param_name[[param]])
 
 pheno_doy<-combine_df_ori %>% 
   dplyr::select(date, site, simulated=pheno, predicted=value) %>% 
@@ -41,22 +42,24 @@ p2<-
   )+
   geom_line(aes(x=doy, y=value, group=year, col=env_summ), alpha=0.5)+
   theme_classic()+
-  ylab("phenology")+
+  labs(x="day of year",
+       y=param_name[[param]],
+       color=env_name[[param]])+
   theme(legend.position="bottom")+
   facet_wrap(.~cat, ncol=1)+
   scale_color_viridis_c(direction=-1)
 
-colors <- c("m" = "blue",
-            "m with mismatch" = "red")
+colors <- c("simulated" = "blue",
+            "mismatched" = "red")
 p3<-
   ggplot(data=param_all %>% filter(site==3))+
-  geom_line(aes(x=year, y=param, group=site, col="m"), lwd=2, alpha=0.5)+
-  geom_line(aes(x=year, y=param_mis, group=site, col="m with mismatch"), lwd=2, alpha=0.5)+
+  geom_line(aes(x=year, y=param, group=site, col="simulated"), lwd=2, alpha=0.5)+
+  geom_line(aes(x=year, y=param_mis, group=site, col="mismatched"), lwd=2, alpha=0.5)+
   # geom_line(data=param_all ,aes(x=year, y=param, group=site, col=site))+
   theme_classic()+
   scale_color_manual(values = colors)+
   labs(x = "year",
-       y = "m",
+       y = param_name[[param]],
        color = "") +
   theme(legend.position="top") 
 
@@ -75,7 +78,7 @@ p4<-
   scale_fill_manual(values = colors)+
   guides(fill=F)+
   labs(x = "date",
-       y = "phenology",
+       y = pheno_name[[param]],
        color = "") +
   theme(legend.position="top") 
 
@@ -99,11 +102,11 @@ p5<-
   theme(legend.position="top") 
 
 cairo_pdf(paste0("./figure/",param,".pdf"), height=8.5, width=11)
-grid.arrange(annotate_figure(p1, fig.lab = "a", fig.lab.pos = "top.left", fig.lab.face = "bold"),
-             annotate_figure(p2, fig.lab = "b", fig.lab.pos = "top.left", fig.lab.face = "bold"),
-             annotate_figure(p3, fig.lab = "c", fig.lab.pos = "top.left", fig.lab.face = "bold"),
-             annotate_figure(p4, fig.lab = "d", fig.lab.pos = "top.left", fig.lab.face = "bold"),
-             annotate_figure(p5, fig.lab = "e", fig.lab.pos = "top.left", fig.lab.face = "bold"),
+grid.arrange(annotate_figure(p1, fig.lab = "A", fig.lab.pos = "top.left", fig.lab.face = "bold"),
+             annotate_figure(p2, fig.lab = "C", fig.lab.pos = "top.left", fig.lab.face = "bold"),
+             annotate_figure(p3, fig.lab = "B", fig.lab.pos = "top.left", fig.lab.face = "bold"),
+             annotate_figure(p4, fig.lab = "D", fig.lab.pos = "top.left", fig.lab.face = "bold"),
+             annotate_figure(p5, fig.lab = "E", fig.lab.pos = "top.left", fig.lab.face = "bold"),
              layout_matrix=rbind(c(1,3,3,3),
                                  c(2,4,4,4),
                                  c(2,5,5,5))

@@ -96,3 +96,15 @@ param_all<-bind_rows(param_all)
 #   geom_line(aes(x=year, y=env_summ, group=site, col=site))+
 #   theme_classic()
 
+param_name<-list("m2"=expression('m'[2]),
+                 "m3"=expression('m'[3]),
+                 "m4"=expression('m'[4]),
+                 "m8"=expression('m'[8]))
+pheno_name<-list("m2"="NPP",
+                 "m3"="breeding activity",
+                 "m4"="EVI",
+                 "m8"="insect abundance")
+env_name<-list("m2"=expression('T'['first 90 days in same year']),
+               "m3"=expression('T'['last 90 days in previous year']),
+               "m4"=expression('T'['first 40 days in same year']),
+               "m8"=expression('T'['all days in same year']))
