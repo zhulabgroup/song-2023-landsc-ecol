@@ -3,10 +3,8 @@ source("code/settings.R")
 
 cl <- makeCluster(num_part, outfile = "")
 registerDoSNOW(cl)
-set.seed(1)
 
-param_list<-c(#"m2","m3", "m4",
-              "m8")
+param_list<-c("m2","m3","m4","m8")
 
 for (param in param_list) {
   path<-paste0("./archive/",param,"/")

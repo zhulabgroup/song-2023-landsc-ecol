@@ -1,3 +1,5 @@
+set.seed(42)
+
 date_list<-seq(as.Date("2021-01-01"),as.Date("2040-12-31"), by=1)
 midyear<-floor(mean(c(as.numeric(format(min(date_list), "%Y")),as.numeric(format(max(date_list), "%Y")))))
 coord_df <- data.frame(lon=0, lat=1:5)
@@ -39,11 +41,12 @@ ts_all<-
   }
 ts_all<-bind_rows(ts_all)
 
-# p<-
-#   ggplot(ts_all)+
-#   geom_line(aes(x=date, y=env, group=site, col=site))+
-#   theme_classic()+
-#   theme(legend.position="right")
-# cairo_pdf("./figure/env.pdf", width = 11, height=4)
-# print (p)
-# dev.off()
+p<-
+  ggplot(ts_all)+
+  geom_line(aes(x=date, y=env, group=site, col=site))+
+  theme_classic()+
+  theme(legend.position="right")+
+  ylab ("Temperature (°C)")
+cairo_pdf("./figure/env.pdf", width = 11, height=4)
+print (p)
+dev.off()

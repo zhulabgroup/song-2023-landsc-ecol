@@ -5,14 +5,14 @@ param_all<-
         filter(site==s) %>% 
         dplyr::select(env,year) %>% 
         group_by(year) %>% 
-        slice_head(n=30) %>% 
+        slice_head(n=90) %>% 
         summarize(env_summ=mean(env)) %>% 
         ungroup() %>% 
         mutate(param=env_to_param (env=env_summ,
                                    lower=0.2,
                                    upper=1,
                                    steepness=-3,
-                                   midpoint=0.5)) %>% 
+                                   midpoint=1.5)) %>% 
         mutate(param_mis = case_when((year>midyear)~param+0.1)) %>%
         mutate(site=s)
     }
@@ -27,7 +27,7 @@ param_all<-
         mutate(env_summ=lag(env_summ)) %>% 
         mutate(param=env_to_param (env=env_summ,
                                    lower=40,
-                                   upper=160,
+                                   upper=120,
                                    steepness=-2,
                                    midpoint=1)) %>% 
         mutate(param_mis = case_when((year>midyear)~param+20)) %>%
@@ -41,13 +41,13 @@ param_all<-
         slice_head(n=14)  %>% 
         summarize(env_summ=mean(env)) %>% 
         ungroup() %>% 
-        mutate(env_summ=lag(env_summ)) %>%
+        # mutate(env_summ=lag(env_summ)) %>%
         mutate(param=env_to_param (env=env_summ,
-                                   lower=0,
+                                   lower=10,
                                    upper=80,
                                    steepness=3.5,
                                    midpoint=1.2)) %>% 
-        mutate(param_mis = case_when((year>midyear)~param-15)) %>%
+        mutate(param_mis = case_when((year>midyear)~param/2)) %>%
         mutate(site=s)
     }
     if (param == "m5") {
@@ -71,15 +71,20 @@ param_all<-
         filter(site==s) %>% 
         dplyr::select(env,year) %>% 
         group_by(year) %>% 
-        slice_head(n=180) %>% 
+        # slice_head(n=180) %>% 
         summarize(env_summ=mean(env)) %>% 
         ungroup() %>% 
+        # mutate(param=env_to_param (env=env_summ,
+        #                            lower=1.2,
+        #                            upper=2.2,
+        #                            steepness=8,
+        #                            midpoint=1.5)) %>% 
         mutate(param=env_to_param (env=env_summ,
-                                   lower=1.2,
-                                   upper=2.2,
-                                   steepness=3,
-                                   midpoint=1.5)) %>% 
-        mutate(param_mis = case_when((year>midyear)~param-0.5)) %>%
+                                   lower=1,
+                                   upper=2,
+                                   steepness=4,
+                                   midpoint=1)) %>% 
+        mutate(param_mis = case_when((year>midyear)~param-0.4)) %>%
         mutate(site=s)
     }
     param_site

@@ -27,6 +27,9 @@ for (i in 1:length(vars)) {
     # for (period in 1:4) {
     #   lags[[i]] <-rlist::list.append(lags[[i]] ,(period-1)*7+1:7)
     # }
+    # for (period in 1:1) {
+    #   lags[[i]] <-rlist::list.append(lags[[i]] ,(period-1)*7+1:7)
+    # }
   }
   if (var_list[vars[i]]  =="env") {
     lags[[i]] <- list()#list(1,2,3,4,5)
@@ -50,10 +53,12 @@ vemin <- 0.001
 vemax <-  0.25^2-vemin # 0.099
 taumin <- 0.001
 taumax <-  0.25^2-taumin#4.99
-gammamin <- 1/30^2 # exp(-d^2*gamma) gamma smaller -> u more similar over space/time
-gammamax <- 1/1^2
-rhomin <- .0001 
-rhomax <- 1-rhomin
+# rhomin <- .0001 
+# rhomax <- 1-rhomin
+gamma1min <- 1/100^2 # exp(-||s1-s2||^2*gamma1) gamma1 smaller -> u more similar over space
+gamma1max <- 1/0.01^2
+gamma2min <- 1/30^2 # exp(-||d1-d2||^2*gamma2) gamma2 smaller -> u more similar over time
+gamma2max <- 1/1^2
 
 V_list<-vector(mode="list")
 for (v in 1:length(vars)){
@@ -73,17 +78,19 @@ priors <- list(
   V_ve = 5,
   E_tau = 0.25^2,#0.25^2/2,
   V_tau = 5,
-  E_rho = 1,
-  V_rho = 0.5,
-  E_gamma = 0,#1/10^2,
-  V_gamma = 0.5
+  # E_rho = 1,
+  # V_rho = 0.5,
+  E_gamma1 = 0,
+  V_gamma1 = 0.5,
+  E_gamma2 = 0,
+  V_gamma2 = 0.5
 )
 
 num_part <- 5
 
 num_epoch <- 1 #20
 
-basisnumber <-5000 
+basisnumber <-2000 
 
 maxcount<-100
 

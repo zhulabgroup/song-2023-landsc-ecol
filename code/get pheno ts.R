@@ -1,3 +1,5 @@
+set.seed(42)
+
 pheno_all<-
   foreach (s = 1:nrow(coord_df)) %dopar% {
     param_site<-param_all %>% filter(site==s)

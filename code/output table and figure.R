@@ -1,6 +1,6 @@
 range_df<-combine_df_ori %>% filter(year <=midyear) %>% 
-  dplyr::summarize(lower=quantile(pheno, 0.025, na.rm=T),
-                   upper=quantile(pheno, 0.975, na.rm=T)) %>% 
+  dplyr::summarize(lower=quantile(pheno, 0, na.rm=T),
+                   upper=quantile(pheno, 1, na.rm=T)) %>% 
   mutate(range=as.numeric(upper-lower))
 
 combine_df_ori_valid<-combine_df_ori %>% filter(year >midyear)

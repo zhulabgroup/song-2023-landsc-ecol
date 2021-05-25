@@ -86,7 +86,7 @@ if (epoch > 1) {
       i = 1:num_part,
       # .export = ls(globalenv()),
       .export = c(
-        "phimax", "phimin", "vemax", "vemin", "taumax", "taumin", "rhomax", "rhomin",
+        # "phimax", "phimin", "vemax", "vemin", "taumax", "taumin", "rhomax", "rhomin",
         "pars_prev", "pars_var_prev", "distMat", "priors",
         "X_train", "P_train", "Y_train",
         "X_basis", "P_basis", "Y_basis",
@@ -124,7 +124,6 @@ if (epoch > 1) {
     foreach(
       i = 1:num_part,
       .export = c(
-        "phimax", "phimin", "vemax", "vemin", "taumax", "taumin", "gammamax", "gammamin",
         "pars_prev", "pars_var_prev", "pars_prev_updated", "distMat", "priors",
         "X_train", "P_train", "Y_train",
         "X_basis", "P_basis", "Y_basis",
@@ -164,6 +163,7 @@ if (epoch > 1) {
 ########################
 # Add new sets of hyperparameters
 ########################
+set.seed(42)
 particles <- matrix(NA, nrow = ndim + 4, ncol = num_part)
 for (i in 1:ndim) {
   particles[i, ] <- rtrunc(n = num_part, spec = "norm", a = phimin, b = phimax, mean = priors$E_phi[i], sd = sqrt(priors$V_phi[i]))
@@ -176,11 +176,14 @@ particles[ndim + 1, ] <- -log((vemax - vemin) / (particles[ndim + 1, ] - vemin) 
 particles[ndim + 2, ] <- rtrunc(n = num_part, spec = "norm", a = taumin, b = taumax, mean = priors$E_tau, sd = sqrt(priors$V_tau))
 particles[ndim + 2, ] <- -log((taumax - taumin) / (particles[ndim + 2, ] - taumin) - 1) # transform
 
-particles[ndim + 3, ] <- rtrunc(n = num_part, spec = "norm", a = rhomin, b = rhomax, mean = priors$E_rho, sd = sqrt(priors$V_rho))
-particles[ndim + 3, ] <- -log((rhomax - rhomin) / (particles[ndim + 3, ] - rhomin) - 1) # transform
+# particles[ndim + 3, ] <- rtrunc(n = num_part, spec = "norm", a = rhomin, b = rhomax, mean = priors$E_rho, sd = sqrt(priors$V_rho))
+# particles[ndim + 3, ] <- -log((rhomax - rhomin) / (particles[ndim + 3, ] - rhomin) - 1) # transform
 
-particles[ndim + 4, ] <- rtrunc(n = num_part, spec = "norm", a = gammamin, b = gammamax, mean = priors$E_gamma, sd = sqrt(priors$V_gamma))
-particles[ndim + 4, ] <- -log((gammamax - gammamin) / (particles[ndim + 4, ] - gammamin) - 1) # transform
+particles[ndim + 3, ] <- rtrunc(n = num_part, spec = "norm", a = gamma1min, b = gamma1max, mean = priors$E_gamma1, sd = sqrt(priors$V_gamma1))
+particles[ndim + 3, ] <- -log((gamma1max - gamma1min) / (particles[ndim + 3, ] - gamma1min) - 1) # transform
+
+particles[ndim + 4, ] <- rtrunc(n = num_part, spec = "norm", a = gamma2min, b = gamma2max, mean = priors$E_gamma2, sd = sqrt(priors$V_gamma2))
+particles[ndim + 4, ] <- -log((gamma2max - gamma2min) / (particles[ndim + 4, ] - gamma2min) - 1) # transform
 
 pars_add <- particles
 pars_id_add <- ((epoch - 1) * num_part + 1):(epoch * num_part)
@@ -190,7 +193,6 @@ Rprop_res_add <-
     i = 1:num_part,
     # .export = ls(globalenv()),
     .export = c(
-      "phimax", "phimin", "vemax", "vemin", "taumax", "taumin", "gammamax", "gammamin",
       "pars_add", "distMat", "priors",
       "X_train", "P_train", "D_train","Y_train",
       "X_basis", "P_basis", "D_basis","Y_basis",
@@ -227,7 +229,6 @@ pars_var_add_updated <-
   foreach(
     i = 1:num_part,
     .export = c( 
-      "phimax", "phimin", "vemax", "vemin", "taumax", "taumin", "gammamax", "gammamin",
       "pars_add_updated", "distMat", "priors",
       "X_train", "P_train", "Y_train",
       "X_basis", "P_basis", "Y_basis",
@@ -243,12 +244,13 @@ pars_var_add_updated <-
     loglik_res <- rep(NA, num_sample)
     
     for (k in 1:num_sample) {
-      lpost <- function(p, sample_n) {
+      lpost <- function(p, sample_n, seed) {
+        set.seed(seed)
         minibatch <- sample(1:nrow(X_train), sample_n)
         return(GPSDM(pars = p, distMat = distMat, basisX = X_basis, basisP = P_basis,basisD=D_basis, basisY = Y_basis, newX = X_train[minibatch, , drop = F], newP = P_train[minibatch, , drop = F],newD = D_train[minibatch, , drop = F], newY = Y_train[minibatch, , drop = F], priors = priors, mode = c("optimize")))
       }
       
-      res <- lpost(pars_sample[, k, drop = F], sample_n = min(nrow(X_train),100))
+      res <- lpost(pars_sample[, k, drop = F], sample_n = min(nrow(X_train),100), seed=k)
       loglik_res[k] <- -res$neglpost
       print(k)
     }
@@ -281,7 +283,6 @@ pars_id_new <- c(pars_id_prev, pars_id_add)
 #     i = 1:ncol(pars_new),
 #     # .export = ls(globalenv()),
 #     .export = c(
-#       "phimax", "phimin", "vemax", "vemin", "taumax", "taumin", "gammamax", "gammamin",
 #       "pars_new", "distMat", "priors",
 #       "X_valid", "P_valid", "Y_valid",
 #       "X_basis", "P_basis", "Y_basis",
