@@ -122,6 +122,6 @@ combine_df_ori<-ts_all %>%
          mismatch_model=value-pheno_mis,
          mismatch_model_upper=upper-pheno_mis,
          mismatch_model_lower=lower-pheno_mis,
-         pred_error=case_when (year<=midyear~value-pheno))
+         pred_error=value-pheno)
 
 
