@@ -144,6 +144,20 @@ for (ty in 2:length(type_list)) {
 mismatch_df<-bind_rows(mismatch_list)
 write_csv(mismatch_df, "./archive/phenocam/mismatch.csv")
 
+mismatch_df<-mismatch_df %>% 
+  left_join(rois_df, by=c("roi"="roi_name"))
+
+cairo_pdf("./archive/phenocam/map.pdf")
+p<-ggplot(mismatch_df)+
+  geom_point(aes(x=lon, y=lat, col=type))+
+  theme_minimal()+
+  xlab("longitude")+
+  ylab("latitude")+
+  guides(col=guide_legend(title=""))+
+  coord_equal()
+print(p)
+dev.off()
+
 cairo_pdf("./archive/phenocam/nRMSE_fit_fore.pdf")
 p<-ggplot(mismatch_df )+
   geom_segment(aes(x=as.factor("fitted" ), xend=as.factor("forecasted"), y=nRMSE_fit, yend=nRMSE_fore),
