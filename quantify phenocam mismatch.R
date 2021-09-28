@@ -45,7 +45,7 @@ for (ty in 2:length(type_list)) {
     distinct(roi_name) %>% 
     unlist()
   
-  nRMSE_fit<-nRMSE_pre<-rep(NA, length(roi_list))
+  nRMSE_fit<-nRMSE_fore<-rep(NA, length(roi_list))
   for (r in 1:length(roi_list)) {
     roi<-roi_list[[r]]
     basisnumber <-200 
@@ -121,7 +121,7 @@ for (ty in 2:length(type_list)) {
       mean() %>% 
       sqrt() 
     
-    nRMSE_pre[r]<-combine_df_ori %>% 
+    nRMSE_fore[r]<-combine_df_ori %>% 
       filter(year>midyear) %>%
       drop_na() %>% 
       mutate(sq=(pred_error/(df_upper_lower[[1]]$range))^2)  %>% 
@@ -135,8 +135,8 @@ for (ty in 2:length(type_list)) {
     dev.off()
   }
   
-  mismatch_list[[ty]]<-data.frame(nRMSE_fit, nRMSE_pre,roi=roi_list,type=type) %>% 
-    mutate(nRMSE_change=nRMSE_pre-nRMSE_fit)
+  mismatch_list[[ty]]<-data.frame(nRMSE_fit, nRMSE_fore,roi=roi_list,type=type) %>% 
+    mutate(nRMSE_change=nRMSE_fore-nRMSE_fit)
   
   closeAllConnections()
 }
@@ -144,20 +144,30 @@ for (ty in 2:length(type_list)) {
 mismatch_df<-bind_rows(mismatch_list)
 write_csv(mismatch_df, "./archive/phenocam/mismatch.csv")
 
-ggplot(mismatch_df )+
-  geom_segment(aes(x=as.factor(0), xend=as.factor(1), y=nRMSE_fit, yend=nRMSE_pre),
+cairo_pdf("./archive/phenocam/nRMSE_fit_fore.pdf")
+p<-ggplot(mismatch_df )+
+  geom_segment(aes(x=as.factor("fitted" ), xend=as.factor("forecasted"), y=nRMSE_fit, yend=nRMSE_fore),
              arrow = arrow(length = unit(0.5, "cm")))+
-  geom_label_repel(aes(x=as.factor(0), y=nRMSE_fit, label=roi_list), cex=3, col="red")+
+  geom_label_repel(aes(x=as.factor("forecasted"), y=nRMSE_fit, label=roi), cex=3, col="red")+
   theme_classic()+
   facet_wrap(.~type)+
-  scale_y_reverse()
+  scale_y_reverse()+
+  xlab("")+
+  ylab("nRMSE")
+print(p)
+dev.off()
 
-ggplot(mismatch_df)+
+cairo_pdf("./archive/phenocam/nRMSE_change.pdf")
+p<-ggplot(mismatch_df)+
   geom_boxplot(aes(x=type, y=nRMSE_change))+
   geom_point(aes(x=type, y=nRMSE_change), cex=2, col="red", pch=1)+
-  geom_label_repel(aes(x=type, y=nRMSE_change, label=roi_list), cex=3, col="red")+
+  geom_label_repel(aes(x=type, y=nRMSE_change, label=roi), cex=3, col="red")+
   theme_classic()+
-  scale_y_reverse()
+  scale_y_reverse()+
+  xlab("")+
+  ylab("nRMSE change")
+print(p)
+dev.off()
 
 t.test(mismatch_df %>% filter(type=="AG") %>% pull(nRMSE_change),
        mismatch_df %>% filter(type=="GR") %>% pull(nRMSE_change))
