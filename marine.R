@@ -111,13 +111,16 @@ abundance_df<-data %>%
                               management==1~"managed")) %>% 
   arrange(species)
 
-ggplot(abundance_df)+
+cairo_pdf("./marine/abundance_roc.pdf")
+p<-ggplot(abundance_df)+
   geom_boxplot(aes(x=management, y=roc))+
   geom_point(aes(x=management, y=roc), cex=2, col="red", pch=1)+
   geom_label_repel(aes(x=management, y=roc, label=species), cex=3, col="red")+
   theme_classic()+
   xlab("")+
   ylab("abundance rate of change")
+print(p)
+dev.off()
 
 t.test(abundance_df %>% filter(management=="managed") %>% pull(roc),
        abundance_df %>% filter(management=="unmanaged") %>% pull(roc))
