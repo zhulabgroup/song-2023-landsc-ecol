@@ -162,7 +162,7 @@ cairo_pdf("./archive/phenocam/nRMSE_fit_fore.pdf")
 p<-ggplot(mismatch_df )+
   geom_segment(aes(x=as.factor("fitted" ), xend=as.factor("forecasted"), y=nRMSE_fit, yend=nRMSE_fore),
              arrow = arrow(length = unit(0.5, "cm")))+
-  geom_label_repel(aes(x=as.factor("forecasted"), y=nRMSE_fit, label=roi), cex=3, col="red")+
+  geom_label_repel(aes(x=as.factor("fitted"), y=nRMSE_fit, label=roi), cex=3, col="red")+
   theme_classic()+
   facet_wrap(.~type)+
   scale_y_reverse()+
