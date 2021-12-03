@@ -13,14 +13,15 @@ if(path=="./simulations/") {
   model_predskill<-data.frame(compare_stats( obs_ori=combine_df_ori_fore$value, pred_ori=combine_df_ori_fore$pheno,range=df_upper_lower[[1]]$range[1])) %>% 
     mutate(cat="model_predskill")
   
-  stats_df<-bind_rows(theo_mismatch,est_mismatch, model_predskill) %>% 
+  stats_list[[p]]<-bind_rows(theo_mismatch,est_mismatch, model_predskill) %>% 
     mutate(cat=factor(cat, levels=c("theo_mismatch", "est_mismatch", "model_predskill"))) %>% 
     gather(key="stats", value="value",-cat ) %>% 
     spread(key="cat", value="value") %>% 
     mutate(stats=factor(stats, levels=c("corr", "R2", "RMSE", "nRMSE"))) %>% 
-    arrange(stats)
-  dir.create(paste0(path, "output"), recursive = T)
-  write_csv(stats_df,paste0(path, "output/",param,".csv"))
+    arrange(stats) %>% 
+    mutate(param=param)
+  # dir.create(paste0(path, "output"), recursive = T)
+  # write_csv(stats_df,paste0(path, "output/",param,".csv"))
 }
 if(path=="./phenocam/") {
   stats_list[[r]]<-bind_rows(data.frame(compare_stats( obs_ori=combine_df_ori_fit$value, pred_ori=combine_df_ori_fit$pheno,range=df_upper_lower[[1]]$range)) %>% 
