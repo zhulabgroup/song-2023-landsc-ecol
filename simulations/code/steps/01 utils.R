@@ -44,9 +44,11 @@ double_logistics<-function (t,
                             sd=0.05
                             ) {
   if (!leap_year(t)) {
-    d<-(as.integer(format(t, "%j")) %% (365/round(m8)))*round(m8)
+    # d<-(as.integer(format(t, "%j")) %% (365/round(m8)))*round(m8)
+    d<-(as.integer(format(t, "%j")) %% (365/(m8)))*(m8)
   } else {
-    d<-(as.integer(format(t, "%j")) %% (366/round(m8)))*round(m8)
+    # d<-(as.integer(format(t, "%j")) %% (366/round(m8)))*round(m8)
+    d<-(as.integer(format(t, "%j")) %% (366/(m8)))*(m8)
   }
   
   

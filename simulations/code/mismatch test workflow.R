@@ -5,7 +5,7 @@ source(paste0(path, "code/steps/02 settings.R"))
 cl <- makeCluster(num_part, outfile = "")
 registerDoSNOW(cl)
 
-param_list<-c("m2","m3","m4","m8")
+param_list<-c("m8", "m2","m3","m4")
 
 for (param in param_list) {
   path_sub<-paste0(path, "archive/",param,"/")

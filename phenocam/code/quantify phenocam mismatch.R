@@ -51,7 +51,7 @@ mismatch_df<-bind_rows(stats_list)
 write_csv(mismatch_df, paste0(path, "output/mismatch.csv"))
 
 mismatch_df<-mismatch_df %>% 
-  left_join(rois_df, by=c("roi"="roi_name"))
+  left_join(rois_df_select, by=c("roi"="roi_name"))
 
 cairo_pdf( paste0(path, "output/map.pdf"))
 p<-ggplot(mismatch_df)+
@@ -64,33 +64,41 @@ p<-ggplot(mismatch_df)+
 print(p)
 dev.off()
 
-cairo_pdf( paste0(path, "output/nRMSE_fit_fore.pdf"))
-p<-ggplot(mismatch_df )+
-  geom_segment(aes(x=as.factor("fitted" ), xend=as.factor("forecasted"), y=nRMSE_fit, yend=nRMSE_fore),
-             arrow = arrow(length = unit(0.5, "cm")))+
-  geom_label_repel(aes(x=as.factor("fitted"), y=nRMSE_fit, label=roi), cex=3, col="red")+
-  theme_classic()+
-  facet_wrap(.~type)+
-  scale_y_reverse()+
-  xlab("")+
-  ylab("nRMSE")
-print(p)
-dev.off()
+for (focal_stats in c("corr", "R2", "RMSE", "nRMSE")) {
+  cairo_pdf( paste0(path, "output/fit_fore_",focal_stats,".pdf"))
+  p<-ggplot(mismatch_df %>% filter(stats==focal_stats))+
+    geom_segment(aes(x=as.factor("fitted" ), xend=as.factor("forecasted"), y=fit, yend=fore),
+                 arrow = arrow(length = unit(0.5, "cm")))+
+    geom_label_repel(aes(x=as.factor("fitted"), y=fit, label=roi), cex=3, col="red")+
+    theme_classic()+
+    facet_wrap(.~type)+
+    # scale_y_reverse()+
+    xlab("")+
+    ylab(focal_stats)
+  print(p)
+  dev.off()
+}
 
-cairo_pdf( paste0(path, "output/nRMSE_change.pdf"))
+
+cairo_pdf( paste0(path, "output/stats_change.pdf"))
 p<-ggplot(mismatch_df)+
-  geom_boxplot(aes(x=type, y=nRMSE_change))+
-  geom_point(aes(x=type, y=nRMSE_change), cex=2, col="red", pch=1)+
-  geom_label_repel(aes(x=type, y=nRMSE_change, label=roi), cex=3, col="red")+
+  geom_boxplot(aes(x=type, y=change))+
+  geom_point(aes(x=type, y=change), cex=2, col="red", pch=1)+
+  # geom_label_repel(aes(x=type, y=change, label=roi), cex=3, col="red")+
   theme_classic()+
-  scale_y_reverse()+
+  # scale_y_reverse()+
   xlab("")+
-  ylab("nRMSE change")
+  ylab("stats change")+
+  facet_wrap(.~stats, ncol=1, scales = "free_y")
 print(p)
 dev.off()
 
-t.test(mismatch_df %>% filter(type=="AG") %>% pull(nRMSE_change),
-       mismatch_df %>% filter(type=="GR") %>% pull(nRMSE_change))
+t.test(mismatch_df %>% filter(stats=="nRMSE") %>% filter(type=="AG") %>% pull(change),
+       mismatch_df %>% filter(stats=="nRMSE") %>% filter(type=="GR") %>% pull(change))
+t.test(mismatch_df %>% filter(stats=="RMSE") %>% filter(type=="AG") %>% pull(change),
+       mismatch_df %>% filter(stats=="RMSE") %>% filter(type=="GR") %>% pull(change))
+t.test(mismatch_df %>% filter(stats=="corr") %>% filter(type=="AG") %>% pull(change),
+       mismatch_df %>% filter(stats=="corr") %>% filter(type=="GR") %>% pull(change))
 
 # file <- c("./gpw_v4_population_density_rev11_30_min.nc")
 # Human <- brick(file)[[1]]

@@ -6,11 +6,11 @@
 combine_df_ori_fit<-combine_df_ori %>% filter(year <=midyear)
 combine_df_ori_fore<-combine_df_ori %>% filter(year >midyear)
 if(path=="./simulations/") {
-  theo_mismatch<-data.frame(compare_stats( obs_ori=combine_df_ori_fore$pheno, pred_ori=combine_df_ori_fore$pheno_mis, range=df_upper_lower[[1]]$range))%>% 
+  theo_mismatch<-data.frame(compare_stats( obs_ori=combine_df_ori_fore$pheno, pred_ori=combine_df_ori_fore$pheno_mis, range=df_upper_lower[[1]]$range[1]))%>% 
     mutate(cat="theo_mismatch")
-  est_mismatch<-data.frame(compare_stats( obs_ori=combine_df_ori_fore$value, pred_ori=combine_df_ori_fore$pheno_mis,range=df_upper_lower[[1]]$range))%>% 
+  est_mismatch<-data.frame(compare_stats( obs_ori=combine_df_ori_fore$value, pred_ori=combine_df_ori_fore$pheno_mis,range=df_upper_lower[[1]]$range[1]))%>% 
     mutate(cat="est_mismatch")
-  model_predskill<-data.frame(compare_stats( obs_ori=combine_df_ori_fore$value, pred_ori=combine_df_ori_fore$pheno,range=df_upper_lower[[1]]$range)) %>% 
+  model_predskill<-data.frame(compare_stats( obs_ori=combine_df_ori_fore$value, pred_ori=combine_df_ori_fore$pheno,range=df_upper_lower[[1]]$range[1])) %>% 
     mutate(cat="model_predskill")
   
   stats_df<-bind_rows(theo_mismatch,est_mismatch, model_predskill) %>% 
@@ -32,7 +32,7 @@ if(path=="./phenocam/") {
     spread(key="cat", value="value") %>% 
     mutate(stats=factor(stats, levels=c("corr", "R2", "RMSE", "nRMSE"))) %>% 
     arrange(stats) %>% 
-    mutate(change=fit-fore) %>% 
+    mutate(change=fore-fit) %>% 
   mutate(type=type,
          roi=roi) 
   
@@ -190,7 +190,7 @@ if (path=="./phenocam/") {
   #   scale_color_viridis_c()+
   #   facet_wrap(.~year, ncol=1)
   
-  dir.create(paste0(path, "output"), recursive = T)
+  dir.create(paste0(path, "output/eachroi"), recursive = T)
   cairo_pdf(paste0(path,"output/eachroi/", type, "_", roi,".pdf"))
   print(p)
   dev.off()

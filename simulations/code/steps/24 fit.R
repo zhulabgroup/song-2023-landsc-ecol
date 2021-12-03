@@ -21,7 +21,7 @@ D_fit <- date_list[(fit_start + 1):(fit_start + steps)] %>%
 xnew <- x
 Sigmanew <- Sigma
 
-step_groups<-split(seq(1:steps) ,ceiling(seq(1:steps) / 1000))
+step_groups<-split(seq(1:steps) ,ceiling(seq(1:steps) / 100))
 
 Y_fit<-Var_fit<-matrix(NA, nrow=nrow(P_fit), ncol = steps )      
 for (g in 1:length(step_groups)) {
