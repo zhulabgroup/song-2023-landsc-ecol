@@ -6,6 +6,7 @@ data<-read_csv("./bethany_bottomtrawl_fall.csv") %>%
   dplyr::select(-SEASON, -name, -LAT, -LON) %>% 
   gather(key="species", value="CPUE", -YEAR, -STRATUM, -NTOWS, -midlat, -midlon, -group) %>% 
   mutate(abundance=CPUE*NTOWS) %>% 
+  mutate(logabun=log(abundance+1)) %>% 
   mutate(site=paste0(midlon,"_", midlat))
   # group_by (YEAR, group, species) %>% 
   # summarize (abundance=sum(abundance),
@@ -50,7 +51,7 @@ for (i in 1:length(sp_list)) {
   
   cairo_pdf(paste0("./marine/ts/",sp, ".pdf"))
   p<-ggplot(data_sp)+
-    geom_line(aes(x=YEAR, y=abundance, col=site, group=site))+
+    geom_line(aes(x=YEAR, y=logabun, col=site, group=site))+
     guides(col="none")+
     theme_classic()+
     xlab("year")
@@ -58,8 +59,8 @@ for (i in 1:length(sp_list)) {
   dev.off()
   
   data_mat<- data_sp %>% 
-    dplyr::select(-site) %>% 
-    spread(key = "id", value="abundance") %>% 
+    dplyr::select(-site, -abundance) %>% 
+    spread(key = "id", value="logabun") %>% 
     dplyr::select(-YEAR)
   
   res<-cor(data_mat,use="complete.obs")
