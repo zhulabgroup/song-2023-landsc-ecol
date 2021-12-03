@@ -1,3 +1,4 @@
+set.seed(42)
 epoch=1
 
 # neighbors and lags
@@ -100,11 +101,11 @@ num_part <- 5
 
 num_epoch <- 1 #20
 
-basisnumber <-100 
+basisnumber <-1000 
 
 maxcount<-100
 
-num_sample<-10
+num_sample<-50
 
 temp_sd<-0.01
 pheno_sd <- 0.02
