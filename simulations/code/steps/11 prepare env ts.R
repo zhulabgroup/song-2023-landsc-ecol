@@ -41,12 +41,12 @@ ts_all<-
   }
 ts_all<-bind_rows(ts_all)
 
-p<-
+p_temp<-
   ggplot(ts_all)+
   geom_line(aes(x=date, y=temp, group=site, col=site))+
   theme_classic()+
   theme(legend.position="right")+
   ylab ("Temperature (°C)")
 cairo_pdf(paste0(path,"output/temp.pdf"), width = 11, height=4)
-print (p)
+print (p_temp)
 dev.off()

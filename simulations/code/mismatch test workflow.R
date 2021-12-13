@@ -39,13 +39,48 @@ for (p in 1:length(param_list)) {
 
 closeAllConnections()
 
+ts_df_list<-vector(mode="list", length=length(param_list))
+for (p in 1:length(param_list)) {
+  param<-param_list[p]
+  ts_df_list[[p]]<-read_csv(paste0(path, "output/",param,".csv"),
+                            col_types=list(pheno_mis=col_double(),
+                                           mismatch_actual=col_double(),
+                                           mismatch_model=col_double(),
+                                           mismatch_model_upper=col_double(),
+                                           mismatch_model_lower=col_double())) %>% 
+    mutate(param=param) %>% 
+    rowwise() %>% 
+    mutate(param_v=param_name[[param]])
+}
+ts_df<-bind_rows(ts_df_list)%>% 
+  mutate(param_v=factor(param_v, levels=c("summer-winter difference", "timing of spring onset", "slope of curve in spring", "pace of life cycles") )) 
+
+colors <- c("simulated mismatch" = "purple",
+            "estimated mismatch" = "dark red",
+            "predictive error" = "dark blue")
+p_ts<-
+  ggplot(ts_df %>% filter(site==3)%>% filter(date>=as.Date(paste0(midyear+1,"-01-01") )))+
+  geom_line(aes(x=date, y=mismatch_actual, col="simulated mismatch"),alpha=0.5)+
+  geom_line( aes(x=date, y=mismatch_model, col="estimated mismatch"), alpha=0.5)+
+  # geom_line( aes(x=date, y=pred_error, col="predictive error"), alpha=0.5)+
+  geom_ribbon(aes(x=date, ymin=mismatch_model_lower, ymax=mismatch_model_upper, fill="estimated mismatch"),alpha=0.25)+
+  theme_classic()+
+  # geom_vline(xintercept =as.Date(paste0(midyear+1,"-01-01") ), alpha=0.5)+
+  scale_color_manual(values = colors)+
+  scale_fill_manual(values = colors)+
+  guides(fill=F)+
+  labs(x = "date",
+       y = "phenological mismatch",
+       color = "") +
+  theme(legend.position="top") +
+  facet_wrap(.~param_v, ncol=1, scales = "free_y")
+p_ts
+
 mismatch_df<-bind_rows(stats_list) %>% 
   mutate(stats=factor(stats, levels=c("corr", "R2", "RMSE", "nRMSE"))) %>% 
-  mutate(param_v=case_when(param=="m2"~ "difference between summer and winter",
-                           param=="m3"~ "timing of spring onset",
-                           param=="m4"~ "slope of curve in spring",
-                           param=="m8"~ "number of life cycles")) %>% 
-  mutate(param_v=factor(param_v, levels=c("difference between summer and winter", "timing of spring onset", "slope of curve in spring", "number of life cycles") %>% rev())) 
+  rowwise() %>% 
+  mutate(param_v=param_name[[param]]) %>% 
+  mutate(param_v=factor(param_v, levels=c("summer-winter difference", "timing of spring onset", "slope of curve in spring", "pace of life cycles") %>% rev())) 
 
 write_csv(mismatch_df, paste0(path, "output/mismatch.csv"))
 
@@ -53,18 +88,24 @@ colors <- c("simulated mismatch" = "purple",
             "estimated mismatch" = "dark red",
             "predictive error" = "dark blue")
 
-p<-ggplot(mismatch_df %>% filter(stats=="nRMSE"))+
+p_stat<-ggplot(mismatch_df %>% filter(stats=="nRMSE"))+
   geom_point(aes(x=param_v, y=theo_mismatch, col="simulated mismatch"))+
   geom_point(aes(x=param_v, y=est_mismatch, col="estimated mismatch"))+
-  geom_point(aes(x=param_v, y=model_predskill, col="predictive error"))+
+  # geom_point(aes(x=param_v, y=model_predskill, col="predictive error"))+
   scale_color_manual(values = colors)+
   # facet_wrap(.~stats, scales="free_y")+
   labs(x = "type of mismatch",
        y = "nRMSE",
        color = "") +
+  ylim(0, 0.2)+
   coord_flip()+
   theme_classic()
+p_stat
 
-cairo_pdf(paste0(path, "output/nRMSE.pdf"), height=4, width=8)
-print(p)
+cairo_pdf(paste0(path, "output/simulated and estimated mismatch.pdf"), height=8, width=8)
+grid.arrange(
+  annotate_figure(p_ts, fig.lab = "A"),
+  annotate_figure(p_stat, fig.lab = "B"),
+  heights=c(0.75, 0.25),ncol=1) %>% 
+  print()
 dev.off()

@@ -87,14 +87,18 @@ param_all<-
 param_all<-bind_rows(param_all)
 # param_all
 
-param_name<-list("m2"=expression('m'[2]),
-                 "m3"=expression('m'[3]),
-                 "m4"=expression('m'[4]),
-                 "m8"=expression('m'[8]))
-pheno_name<-list("m2"="NPP",
-                 "m3"="breeding activity",
-                 "m4"="EVI",
-                 "m8"="insect abundance")
+# param_name<-list("m2"=expression('m'[2]),
+#                  "m3"=expression('m'[3]),
+#                  "m4"=expression('m'[4]),
+#                  "m8"=expression('m'[8]))
+param_name<-list("m2"="summer-winter difference",
+                 "m3"="timing of spring onset",
+                 "m4"="slope of curve in spring",
+                 "m8"="pace of life cycles")
+pheno_name<-list("m2"="net primary productivity",
+                 "m3"="bird breeding activity",
+                 "m4"="enhanced vegetation index",
+                 "m8"="adult insect abundance")
 env_name<-list("m2"=expression('T'['first 90 days in same year']),
                "m3"=expression('T'['last 90 days in previous year']),
                "m4"=expression('T'['first 40 days in same year']),

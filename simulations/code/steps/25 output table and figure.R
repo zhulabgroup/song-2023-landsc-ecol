@@ -6,6 +6,10 @@
 combine_df_ori_fit<-combine_df_ori %>% filter(year <=midyear)
 combine_df_ori_fore<-combine_df_ori %>% filter(year >midyear)
 if(path=="./simulations/") {
+  
+  dir.create(paste0(path, "output"), recursive = T)
+  write_csv(combine_df_ori,paste0(path, "output/",param,".csv"))
+  
   theo_mismatch<-data.frame(compare_stats( obs_ori=combine_df_ori_fore$pheno, pred_ori=combine_df_ori_fore$pheno_mis, range=df_upper_lower[[1]]$range[1]))%>% 
     mutate(cat="theo_mismatch")
   est_mismatch<-data.frame(compare_stats( obs_ori=combine_df_ori_fore$value, pred_ori=combine_df_ori_fore$pheno_mis,range=df_upper_lower[[1]]$range[1]))%>% 
@@ -19,7 +23,9 @@ if(path=="./simulations/") {
     spread(key="cat", value="value") %>% 
     mutate(stats=factor(stats, levels=c("corr", "R2", "RMSE", "nRMSE"))) %>% 
     arrange(stats) %>% 
-    mutate(param=param)
+    mutate(param=param) %>% 
+    rowwise() %>% 
+    mutate(param_v=param_name[[param]])
   # dir.create(paste0(path, "output"), recursive = T)
   # write_csv(stats_df,paste0(path, "output/",param,".csv"))
 }
@@ -65,7 +71,7 @@ if(path=="./simulations/") {
     geom_line(aes(x=doy, y=value, group=year, col=temp_summ), alpha=0.5)+
     theme_classic()+
     labs(x="day of year",
-         y=param_name[[param]],
+         y=pheno_name[[param]],
          color=env_name[[param]])+
     theme(legend.position="bottom")+
     facet_wrap(.~cat, ncol=1)+
@@ -89,13 +95,13 @@ if(path=="./simulations/") {
               "simulated phenology with mismatch" = "red",
               "predicted phenology" = "black")
   p4<-
-    ggplot(combine_df_ori %>% filter(site==3))+
+    ggplot(combine_df_ori %>% filter(site==3) %>% filter(date>=as.Date(paste0(midyear+1,"-01-01") )))+
     geom_line(aes(x=date, y=pheno, col="simulated phenology"),alpha=0.5)+
     geom_line( aes(x=date, y=pheno_mis, col="simulated phenology with mismatch"), alpha=0.5)+
     geom_line(aes(x=date, y=value, col="predicted phenology"))+
     geom_ribbon(aes(x=date, ymin=lower, ymax=upper, fill="predicted phenology"),alpha=0.25)+
     theme_classic()+
-    geom_vline(xintercept =as.Date(paste0(midyear+1,"-01-01") ), alpha=0.5)+
+    # geom_vline(xintercept =as.Date(paste0(midyear+1,"-01-01") ), alpha=0.5)+
     scale_color_manual(values = colors)+
     scale_fill_manual(values = colors)+
     guides(fill=F)+
@@ -108,18 +114,18 @@ if(path=="./simulations/") {
               "estimated mismatch" = "dark red",
               "predictive error" = "dark blue")
   p5<-
-    ggplot(combine_df_ori %>% filter(site==3))+
+    ggplot(combine_df_ori %>% filter(site==3)%>% filter(date>=as.Date(paste0(midyear+1,"-01-01") )))+
     geom_line(aes(x=date, y=mismatch_actual, col="simulated mismatch"),alpha=0.5)+
     geom_line( aes(x=date, y=mismatch_model, col="estimated mismatch"), alpha=0.5)+
-    geom_line( aes(x=date, y=pred_error, col="predictive error"), alpha=0.5)+
+    # geom_line( aes(x=date, y=pred_error, col="predictive error"), alpha=0.5)+
     geom_ribbon(aes(x=date, ymin=mismatch_model_lower, ymax=mismatch_model_upper, fill="estimated mismatch"),alpha=0.25)+
     theme_classic()+
-    geom_vline(xintercept =as.Date(paste0(midyear+1,"-01-01") ), alpha=0.5)+
+    # geom_vline(xintercept =as.Date(paste0(midyear+1,"-01-01") ), alpha=0.5)+
     scale_color_manual(values = colors)+
     scale_fill_manual(values = colors)+
     guides(fill=F)+
     labs(x = "date",
-         y = "deviation",
+         y = "phenological mismatch",
          color = "") +
     theme(legend.position="top") 
   
