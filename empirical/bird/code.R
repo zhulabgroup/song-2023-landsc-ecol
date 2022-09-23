@@ -118,11 +118,32 @@ sos_df<-bind_rows(sos_df_list)
 sos_df
 write_rds(sos_df, "./empirical/bird/data/sos.rds")
 
+
+bri<-brick("/data/ZHULAB/phenology/Velocity/TerraClimate/MAT_0.05degree.nc")
+mat_df_list<-
+  foreach (year = 1981:2014,
+           .packages = c("gdalUtils", "raster", "tidyverse")) %dopar% {
+             
+             mat_ras<-bri[[year-1958+1]] %>% 
+               crop( extent_sp)
+             
+             coord_df_reproj %>% 
+               dplyr::select(lon, lat) %>% 
+               mutate(mat=raster::extract(mat_ras,coord_sp_reproj)) %>% 
+               mutate(year=year)
+           }
+mat_df<-bind_rows(mat_df_list)
+mat_df
+write_rds(mat_df, "./empirical/bird/data/mat.rds")
+
 sos_df<-read_rds("./empirical/bird/data/sos.rds")
+mat_df<-read_rds("./empirical/bird/data/mat.rds")
 data_df<-bird_df %>% 
   left_join(sos_df, by=c("lat", "lon", "year")) %>% 
+  left_join(mat_df, by=c("lat", "lon", "year")) %>% 
   group_by(species,area, year, period, mig) %>% 
   summarise(sos=median(sos, na.rm=T),
+            mat=median(mat, na.rm=T),
             bh=quantile(doy, 0.05, na.rm=T),
             X=median(X),
             Y=median(Y),
@@ -158,6 +179,11 @@ ggplot(data_df)+
 
 
 ggplot(data_df)+
+  geom_point(aes(x=mat, y=bh, col=period), alpha=0.3)+
+  geom_smooth(aes(x=mat, y=bh,group=period, col=period), method="lm")+
+  theme_classic()+
+  facet_wrap(.~paste0(mig, ": ",species), scales = "free")
+ggplot(data_df)+
   geom_point(aes(x=sos, y=bh, col=period), alpha=0.3)+
   geom_smooth(aes(x=sos, y=bh,group=period, col=period), method="lm")+
   theme_classic()+
@@ -178,7 +204,7 @@ foreach (sp = sp_list,
            data_sp<-data_df %>% 
              filter(species==sp) %>% 
              drop_na() %>% 
-             dplyr::select(x=X, y=Y, sos, bh, period, area, species, mig, year)
+             dplyr::select(x=X, y=Y, mat, bh, period, area, species, mig, year)
            ### Fit nonspatial and spatial model
            
            # Prepare data frame
@@ -186,7 +212,7 @@ foreach (sp = sp_list,
              filter(period=="early")
            
              # Preparing to run Gaussian spatial model; get model phi (spatial decay parameter) estimate
-             z <- resid(lm(bh ~ sos, data_train)) # residuals of non-spatial model
+             z <- resid(lm(bh ~ mat, data_train)) # residuals of non-spatial model
              data_train$z <- z
              lm.vgm <- variogram(z ~ 1, data = data_train %>% `coordinates<-`(data_train[, c("x", "y")]))
              # plot(lm.vgm)
@@ -203,7 +229,7 @@ foreach (sp = sp_list,
              # knots = kmeans(coords, 20,iter.max=100)$centers
              
              # Run Gaussian spatial model
-             splm <- spLM(bh ~ sos, data = data_train, coords = data_train[, c("x", "y")] %>% as.matrix(), cov.model = "exponential", priors = priors, tuning = tuning, starting = starting, n.samples = 10000, n.report = 1000
+             splm <- spLM(bh ~ mat, data = data_train, coords = data_train[, c("x", "y")] %>% as.matrix(), cov.model = "exponential", priors = priors, tuning = tuning, starting = starting, n.samples = 10000, n.report = 1000
                           # , knots=knots
              )
              
@@ -223,7 +249,7 @@ foreach (sp = sp_list,
              #   coef.summary <- data.frame(median, lower, upper)
              
              ### Prediction
-             splm.pred <- spPredict(splm, pred.covars=cbind(1, data_sp[, "sos"]) %>% as.matrix(), pred.coords=data_sp[, c("x", "y")] %>% as.matrix(),
+             splm.pred <- spPredict(splm, pred.covars=cbind(1, data_sp[, "mat"]) %>% as.matrix(), pred.coords=data_sp[, c("x", "y")] %>% as.matrix(),
                                     start=5001, thin = 10)
              quant <- function(x){quantile(x, prob=c(0.025, 0.5, 0.975))}
              y.hat <- apply(splm.pred$p.y.predictive.samples, 1, quant) %>% 
@@ -237,10 +263,10 @@ foreach (sp = sp_list,
 }
 data_mis<-bind_rows(data_df_new_list) %>% 
   mutate(resid=bh-predict) 
-write_rds(data_mis, "./empirical/bird/data/mismatch.rds")
+write_rds(data_mis, "./empirical/bird/data/mismatch_mat.rds")
 stopCluster(cl)
 
-data_mis<-read_rds("./empirical/bird/data/mismatch.rds")
+data_mis<-read_rds("./empirical/bird/data/mismatch_mat.rds")
 # ggplot(data_mis %>% filter(period=="early"))+
 #   geom_point(aes(x=predict, y=bh, col=area))+
 #   geom_errorbarh(aes(y=bh, xmin=lower, xmax=upper, col=area))+
@@ -292,7 +318,7 @@ hist(data_mis %>%
 t.test(data_mis %>% 
          filter(period=="late") %>% 
          pull(resid),
-       alternative = "greater")
+       alternative = "two.sided")
 t_df<-data_mis %>% 
   filter(period=="late") %>% 
   group_by(species) %>%
