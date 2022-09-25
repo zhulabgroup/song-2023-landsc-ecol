@@ -120,7 +120,8 @@ p_map<-ggplot()+
   coord_equal()+
   # xlab("Latitude")+
   # ylab("Longitude")+
-  labs(col="BBS (day of year)")
+  labs(col="BBS (day of year)")+
+  theme(legend.position="bottom")
 
 p_map
 
@@ -266,6 +267,29 @@ sp_list<-data_agg_df %>%
   filter(early>=100&late>=100) %>% 
   pull(species)
 data_agg_df<-data_agg_df %>% filter(species %in% sp_list)
+
+### niche
+data_agg_df %>% pull(year) %>% summary()
+data_agg_df %>% 
+  group_by(species) %>% 
+  do(broom::tidy(lm(mat ~ year, .))) %>%
+  filter(term %in% c("year")) %>% 
+  filter(p.value<0.05) %>% 
+  summary()
+
+data_agg_df %>% 
+  group_by(species) %>% 
+  do(broom::tidy(lm(bh ~ year, .))) %>%
+  filter(term %in% c("year")) %>%
+  filter(p.value<0.05) %>% 
+  summary()
+
+data_agg_df %>% 
+  group_by(species) %>% 
+  summarise(mat=median(mat, na.rm=T),
+            bh=median(bh, na.rm=T)) %>% 
+  summary()
+
 # ggplot(data_df%>% filter(species==sp_vis) )+
 #   geom_point(aes(x=year, y=bh), alpha=0.3)+
 #   geom_smooth(aes(x=year, y=bh), method="loess")+
@@ -285,6 +309,26 @@ ggplot(data_agg_df)+
   theme_classic()+
   facet_wrap(.~paste0(mig,": ",species), scales = "free")
 
+### relationship
+data_agg_df %>%
+  group_by(species) %>%
+  do(broom::tidy(lm(bh ~ mat, .))) %>%
+  filter(term %in% c("mat")) %>%
+  dplyr::select(-statistic) %>% 
+  filter(p.value<0.05) %>% 
+  summary()
+
+data_agg_df %>%
+  group_by(species, period) %>%
+  do(broom::tidy(lm(bh ~ mat, .))) %>%
+  ungroup() %>% 
+  dplyr::select(species, period, term, estimate) %>% 
+  spread(key="period", value="estimate") %>% 
+  mutate(diff=late-early) %>% 
+  group_by(term) %>%
+  summarise(median=median(diff),
+            lower=quantile(diff, 0.025),
+            upper=quantile(diff, 0.975))
 
 ggplot(data_agg_df )+
   geom_point(aes(x=mat, y=bh, col=period), alpha=0.1)+
@@ -307,7 +351,8 @@ p_func<-ggplot(data_agg_df%>% filter(species==sp_vis))+
   geom_smooth(aes(x=mat, y=bh,group=period, col=period), method="lm")+
   theme_classic()+
   xlab("MAT (°C)")+
-  ylab("BBS (day of year)")
+  ylab("BBS (day of year)")+
+  labs(color='Time period')
 p_func
 
 data_df_new_list<-
@@ -378,23 +423,23 @@ write_rds(data_mis, "./empirical/bird/data/mismatch_mat.rds")
 stopCluster(cl)
 
 data_mis<-read_rds("./empirical/bird/data/mismatch_mat.rds")
-# ggplot(data_mis %>% filter(period=="early"))+
-#   geom_point(aes(x=predict, y=bh, col=area))+
-#   geom_errorbarh(aes(y=bh, xmin=lower, xmax=upper, col=area))+
-#   geom_abline(intercept = 0, slope=1, col="red")+
-#   theme_classic()+
-#   facet_wrap(.~mig*species, scales = "free")
-# 
-# ggplot(data_mis %>% filter(period=="late"))+
-#   geom_point(aes(x=predict, y=bh, col=area))+
-#   geom_errorbarh(aes(y=bh, xmin=lower, xmax=upper, col=area))+
-#   geom_abline(intercept = 0, slope=1, col="red")+
-#   theme_classic()+
-#   facet_wrap(.~mig*species, scales = "free")
 
+data_mis %>% 
+  group_by(species, period) %>% 
+  summarise (R2=cor(predict, bh)^2,
+             rmse=Metrics::rmse(predict, bh)) %>% 
+  gather(key="stat", value="value", -species, -period) %>% 
+  spread(key="period", value="value") %>% 
+  mutate(diff=late-early) %>% 
+  gather(key="report", value="value", -species, -stat) %>% 
+  group_by(stat, report ) %>% 
+  summarise(median=quantile(value, 0.5),
+            lower=quantile(value, 0.025),
+            upper=quantile(value, 0.975))
 # plot mismatch
+
 p_pred<-ggplot(data_mis  %>% filter(species==sp_vis))+
-  geom_point(aes(x=predict, y=bh), alpha=0.1)+
+  geom_point(aes(x=predict, y=bh), alpha=0.2)+
   # geom_errorbarh(aes(y=bh, xmin=lower, xmax=upper), alpha=0.5)+
   # geom_smooth(aes(x=predict, y=bh), method="lm")+
   geom_abline(intercept = 0, slope=1, col="red")+
@@ -413,46 +458,53 @@ p_pred<-ggplot(data_mis  %>% filter(species==sp_vis))+
   facet_wrap(.~period, nrow=1)+
   guides(col="none")+
   xlab("Predicted BBS (day of year)")+
-  ylab("Observed BBS (day of year)")+
-  # coord_equal()+
-  scale_fill_viridis_c()
+  ylab("Observed BBS (day of year)")
 p_pred
 
 # test if mismatch is different from 0
-hist(data_mis %>% 
-       filter(period=="late") %>% 
-       pull(resid))
-# cor_res<-cor.test(data_mis %>%  filter(period=="late") %>% pull(bh),
-#          data_mis %>%  filter(period=="late") %>% pull(predict)
-#          )
-# cor_res
-# cor_res$estimate^2
+data_mis %>% 
+  filter(period=="late") %>% 
+  summarise(median=quantile(resid, 0.5),
+            lower=quantile(resid, 0.025),
+            upper=quantile(resid, 0.975))
 
 t.test(data_mis %>% 
          filter(period=="late") %>% 
          pull(resid),
-       alternative = "two.sided")
+       alternative = "less")
+
 t_df<-data_mis %>% 
   filter(period=="late") %>% 
   group_by(species) %>%
-  summarise(p=t.test(x=resid)$p.value,
+  summarise(median=quantile(resid, 0.5),
+            lower=quantile(resid, 0.025),
+            upper=quantile(resid, 0.975),
+            p=t.test(x=resid)$p.value,
             estimate=t.test(x=resid)$estimate) 
 
+t_df %>% 
+  filter(p<0.05) %>% 
+  group_by(median<0) %>% 
+  summarise(n=n(),
+            lower=min(median),
+            upper=max(median))
+
 p_mis<-ggplot()+
+  # geom_violin(data=data_mis %>% filter(period=="late"),
+  #             aes(x=as.factor("all species"),y=resid), fill="grey", draw_quantiles = 0.5)+
   geom_violin(data=data_mis %>% filter(period=="late"),
-              aes(x=as.factor("all species"),y=resid), fill="grey", draw_quantiles = 0.5)+
-  geom_violin(data=data_mis %>% filter(period=="late"),
-              aes(x=paste0(mig, ": ",species),y=resid, col=species), draw_quantiles = 0.5)+
+              aes(x=species,y=resid, col=species), draw_quantiles = 0.5)+
   geom_violin(data=data_mis %>% filter(period=="late") %>% left_join(t_df, by="species") %>% filter(p<0.05),
-              aes(x=paste0(mig, ": ",species),y=resid, fill=species), draw_quantiles = 0.5)+
+              aes(x=species,y=resid, fill=species), draw_quantiles = 0.5)+
   # geom_violin(data=data_mis %>% filter(period=="late"),
   #             aes(x=mig,y=resid), fill="grey", draw_quantiles = 0.5)+
   geom_hline(yintercept = 0)+
   theme_classic()+
   guides(col="none", fill="none")+
   coord_flip()+
-  ylab("Difference between observed and predicted BBS (day)")+
-  xlab ("Species")
+  ylab("Deviation of observed FS from predicted FS (day)")+
+  xlab ("Species")+
+  theme(axis.text.y =element_text(face="italic")) 
 p_mis
 
 

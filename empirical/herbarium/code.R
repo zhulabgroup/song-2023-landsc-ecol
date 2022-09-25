@@ -24,8 +24,8 @@ data_df<-read_csv("./empirical/herbarium/data/hf309-01-crowdcurio.csv") %>%
   distinct(link, .keep_all = T) %>% 
   dplyr::select(-maxp, -link) %>% 
   mutate(period=case_when(year>=1950~"late",
-                          TRUE~"early"))# %>% 
-  # mutate(site=row_number())
+                          TRUE~"early")) %>% 
+  mutate(species=str_replace(species, "_", " "))
 
 # select species
 sp_list<-data_df %>% 
@@ -53,16 +53,43 @@ p_map <- ggplot() +
   ) +
   geom_point(data=data_df, aes(x=lon, y=lat, col=species), alpha=0.3, pch=1)+
   geom_point(data=data_df %>% filter(species==sp_vis), aes(x=lon, y=lat, col=species), alpha=1, shape=19)+
-  theme_void() +
-  # xlab("Longitude") +
-  # ylab("Latitude") +
+  theme_minimal() +
+  xlab("Longitude") +
+  ylab("Latitude") +
   # guides(col = guide_legend(title = "Species")) +
   guides(col = "none") +
   coord_equal()#+
   # facet_wrap(.~period)
 p_map
 
+data_df %>% 
+  group_by(species) %>% 
+  summarise(temp=median(temp),
+            fl=median(fl)) %>% 
+  summary()
 # change in functional relationship 
+data_df %>%
+  group_by(species) %>%
+  do(broom::tidy(lm(fl ~ temp, .))) %>%
+  filter(term %in% c("temp")) %>%
+  dplyr::select(-statistic) %>% 
+  filter(p.value<0.05) %>% 
+  summary()
+
+data_df %>%
+  group_by(species, period) %>%
+  do(broom::tidy(lm(fl ~ temp, .))) %>%
+  # filter(term %in% c("temp")) %>%
+  ungroup() %>% 
+  dplyr::select(species, period, term, estimate) %>% 
+  spread(key="period", value="estimate") %>% 
+  mutate(diff=late-early) %>% 
+  group_by(term) %>%
+  summarise(median=median(diff),
+            lower=quantile(diff, 0.025),
+            upper=quantile(diff, 0.975))
+
+
 ggplot(data_df)+
   geom_point(aes(x=temp, y=fl, col=period), alpha=0.3)+
   geom_smooth(aes(x=temp, y=fl, group=period, col=period), method="lm")+
@@ -140,29 +167,42 @@ data_mis<-bind_rows(data_df_new_list) %>%
 write_rds(data_mis, "./empirical/herbarium/data/mismatch.rds")
 stopCluster(cl)
 
-data_mis<-read_rds("./empirical/herbarium/data/mismatch.rds")
+data_mis<-read_rds("./empirical/herbarium/data/mismatch.rds") 
+data_mis %>% 
+  group_by(species, period) %>% 
+  summarise (R2=cor(predict, fl)^2,
+             rmse=Metrics::rmse(predict, fl)) %>% 
+  gather(key="stat", value="value", -species, -period) %>% 
+  spread(key="period", value="value") %>% 
+  mutate(diff=late-early) %>% 
+  gather(key="report", value="value", -species, -stat) %>% 
+  group_by(stat, report ) %>% 
+  summarise(median=quantile(value, 0.5),
+            lower=quantile(value, 0.025),
+            upper=quantile(value, 0.975))
+  
+
 # plot mismatch
 p_pred<-ggplot(data_mis  %>% filter(species==sp_vis))+
-  geom_point(aes(x=predict, y=fl))+
-  geom_errorbarh(aes(y=fl, xmin=lower, xmax=upper), alpha=0.5)+
+  geom_point(aes(x=predict, y=fl), alpha=0.5)+
+  # geom_errorbarh(aes(y=fl, xmin=lower, xmax=upper), alpha=0.5)+
   geom_abline(intercept = 0, slope=1, col="red")+
-  ggpubr::stat_cor(
-    aes(
-      x=predict, y=fl,
-      label = paste( ..rr.label..,..p.label.., sep = "*`,`~")
-    ),
-    p.accuracy = 0.05,
-    label.x.npc = "left",
-    label.y.npc = "top",
-    show.legend = F,
-    col = "blue"
-  ) +
+  # ggpubr::stat_cor(
+  #   aes(
+  #     x=predict, y=fl,
+  #     label = paste( ..rr.label..,..p.label.., sep = "*`,`~")
+  #   ),
+  #   p.accuracy = 0.05,
+  #   label.x.npc = "left",
+  #   label.y.npc = "top",
+  #   show.legend = F,
+  #   col = "blue"
+  # ) +
   theme_classic()+
   facet_wrap(.~period, nrow=1)+
   guides(col="none")+
   xlab("Predicted FS (day of year)")+
-  ylab("Observed FS (day of year)")+
-  coord_equal()
+  ylab("Observed FS (day of year)")
 p_pred
 
 # ggplot(data_mis %>% filter(period=="late"))+
@@ -179,9 +219,12 @@ p_pred
 #   theme_classic()
 
 # test if mismatch is different from 0
-hist(data_mis %>% 
-       filter(period=="late") %>% 
-       pull(resid))
+data_mis %>% 
+  filter(period=="late") %>% 
+  summarise(median=quantile(resid, 0.5),
+            lower=quantile(resid, 0.025),
+            upper=quantile(resid, 0.975))
+
 t.test(data_mis %>% 
          filter(period=="late") %>% 
          pull(resid),
@@ -190,9 +233,18 @@ t.test(data_mis %>%
 t_df<-data_mis %>% 
   filter(period=="late") %>% 
   group_by(species) %>%
-  summarise(p=t.test(x=resid)$p.value,
+  summarise(median=quantile(resid, 0.5),
+            lower=quantile(resid, 0.025),
+            upper=quantile(resid, 0.975),
+            p=t.test(x=resid)$p.value,
             estimate=t.test(x=resid)$estimate,
             med_fl=median(fl)) 
+t_df %>% 
+  filter(p<0.05) %>% 
+  group_by(median<0) %>% 
+  summarise(n=n(),
+            lower=min(median),
+            upper=max(median))
 
 t_df %>% 
   ggplot()+
@@ -218,8 +270,8 @@ t_df %>%
 #   mutate(species=fct_relevel(species, levels=sp_list_order))
 
 p_mis<-ggplot()+
-  geom_violin(data=data_mis %>% filter(period=="late"),
-              aes(x=as.factor("all species"),y=resid), fill="grey", draw_quantiles = 0.5)+
+  # geom_violin(data=data_mis %>% filter(period=="late"),
+  #             aes(x=as.factor("all species"),y=resid), fill="grey", draw_quantiles = 0.5)+
   geom_violin(data=data_mis %>% filter(period=="late"),
               aes(x=species,y=resid, col=species), draw_quantiles = 0.5)+
   geom_violin(data=data_mis %>% filter(period=="late") %>% left_join(t_df, by="species") %>% filter(p<0.05),
@@ -228,8 +280,9 @@ p_mis<-ggplot()+
   theme_classic()+
   guides(col="none", fill="none")+
   coord_flip()+
-  ylab("Difference between observed and predicted FS (day)")+
-  xlab ("Species")
+  ylab("Deviation of observed FS from predicted FS (day)")+
+  xlab ("Species")+
+  theme(axis.text.y =element_text(face="italic")) 
 p_mis
 
 cairo_pdf("./empirical/herbarium/figure.pdf", width = 10, height = 10)
@@ -342,5 +395,3 @@ summary(lme.fit)
 #   guides(col="none")+
 #   facet_wrap(.~species, scales = "free")+
 #   geom_hline(yintercept = 0, lty=2)
-
-### Bird and plants
