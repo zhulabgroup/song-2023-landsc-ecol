@@ -1,6 +1,7 @@
 # source: https://datadryad.org/stash/dataset/doi:10.5061/dryad.wstqjq2ht
 library(raster)
 library(gdalUtils)
+library(maptools)
 bird_df<-read_csv("./empirical/bird/data/73_species.csv")  %>% 
   dplyr::select(
     nestid=NestID,
@@ -53,9 +54,12 @@ world <- map("world", fill = TRUE)
 IDs <- sapply(strsplit(world$names, ":"), function(x) x[1])
 world <- map2SpatialPolygons(world, IDs = IDs, proj4string = CRS("+proj=longlat +datum=WGS84"))
 finland<-world["Finland"]
+finland_andmore<-world[c("Finland","Russia", "Norway", "Sweden")]
 finland_reproj<-spTransform(finland,CRS("EPSG:3067") )
+finland_andmore_reproj<-spTransform(finland_andmore,CRS("EPSG:3067") )
 
-
+area <- extent(min(coord_df$X) - 200000, max(coord_df$X) + 200000, min(coord_df$Y) - 200000, max(coord_df$Y) + 200000)
+finland_andmore_reproj_crop <- crop(finland_andmore_reproj, area)
 
 ### aggregate
 size <- 100000
@@ -90,6 +94,10 @@ ggplot() +
 
 p_map<-ggplot()+
   geom_polygon(
+    data = finland_andmore_reproj_crop, aes(x = long, y = lat, group = group),
+    color = "darkblue", fill = "white", size = .1
+  ) +
+  geom_polygon(
     data = finland_reproj, aes(x = long, y = lat, group = group),
     color = "darkblue", fill = "lightblue", size = .1
   ) +
@@ -120,82 +128,82 @@ p_map<-ggplot()+
   coord_equal()+
   # xlab("Latitude")+
   # ylab("Longitude")+
-  labs(col="BBS (day of year)")+
+  labs(col="Nestling ringing time \n (day of year)")+
   theme(legend.position="bottom")
 
 p_map
 
-### vipphen SOS
-extent_sp<-extent(coord_df_reproj$lon %>% min()-1,
-                  coord_df_reproj$lon %>% max()+1,
-                  coord_df_reproj$lat %>% min()-1,
-                  coord_df_reproj$lat %>% max()+1) %>% 
-  as('SpatialPolygons') %>% 
-  `projection<-` (CRS("+proj=longlat +datum=WGS84"))
-
-files<-list.files("/data/ZHULAB/phenology/VIPPHEN", pattern =".hdf", full.names = T) %>% sort()
-
-cl <- makeCluster(20, outfile = "")
-registerDoSNOW(cl)
-sos_df_list<-
-foreach (file = files,
-         .packages = c("gdalUtils", "raster", "tidyverse")) %dopar% {
-  year<-file %>% 
-    str_split(pattern = "/") %>% 
-    unlist() %>% 
-    tail(1) %>% 
-    str_split(pattern = "\\.") %>% 
-    unlist() %>% 
-    .[2] %>% 
-    str_replace("A", "") %>% 
-    as.numeric()
-  sds <- get_subdatasets(file)
-  sos<-sds[1] %>% 
-    raster() %>% 
-    flip(direction = "y") %>% 
-    `extent<-` (c(-180,180,-90,90)) %>% 
-    `projection<-` (CRS("+proj=longlat +datum=WGS84")) %>% 
-    crop( extent_sp)
-  sos[sos<=0]<-NA
-  sos[sos>365]<-NA
-  mask<-sds[26] %>% 
-    raster() %>% 
-    flip(direction = "y") %>% 
-    `extent<-` (c(-180,180,-90,90)) %>% 
-    `projection<-` (CRS("+proj=longlat +datum=WGS84"))%>% 
-    crop( extent_sp)
-  mask[mask>3]<-NA
-  mask[!is.na(mask)]<-1
-  sos_mask<-sos*mask
-  
-  coord_df_reproj %>% 
-    dplyr::select(lon, lat) %>% 
-    mutate(sos=raster::extract(sos_mask,coord_sp_reproj)) %>% 
-    mutate(year=year)
-}
-sos_df<-bind_rows(sos_df_list)
-sos_df
-write_rds(sos_df, "./empirical/bird/data/sos.rds")
-sos_df_goodcoord<-sos_df %>% 
-  drop_na() %>% 
-  group_by(lon, lat) %>% 
-  summarise(n=n()) %>% 
-  ungroup() %>% 
-  filter(n>=25)
-
-ggplot()+
-  geom_polygon(
-    data = finland, aes(x = long, y = lat, group = group),
-    color = "darkblue", fill = "lightblue", size = .1
-  ) +
-  geom_point(data=sos_df_goodcoord,aes(x=lon, y=lat, col=n))+
-  
-  
-sos_df<-sos_df %>% 
-  right_join(sos_df_goodcoord %>% dplyr::select(lon, lat), by=c("lon", "lat"))
-
-ggplot(sos_df %>% filter(lon==sos_df$lon[1], lat==sos_df$lat[1]))+
-  geom_point(aes(x=year, y=sos))
+# ### vipphen SOS
+# extent_sp<-extent(coord_df_reproj$lon %>% min()-1,
+#                   coord_df_reproj$lon %>% max()+1,
+#                   coord_df_reproj$lat %>% min()-1,
+#                   coord_df_reproj$lat %>% max()+1) %>% 
+#   as('SpatialPolygons') %>% 
+#   `projection<-` (CRS("+proj=longlat +datum=WGS84"))
+# 
+# files<-list.files("/data/ZHULAB/phenology/VIPPHEN", pattern =".hdf", full.names = T) %>% sort()
+# 
+# cl <- makeCluster(20, outfile = "")
+# registerDoSNOW(cl)
+# sos_df_list<-
+# foreach (file = files,
+#          .packages = c("gdalUtils", "raster", "tidyverse")) %dopar% {
+#   year<-file %>% 
+#     str_split(pattern = "/") %>% 
+#     unlist() %>% 
+#     tail(1) %>% 
+#     str_split(pattern = "\\.") %>% 
+#     unlist() %>% 
+#     .[2] %>% 
+#     str_replace("A", "") %>% 
+#     as.numeric()
+#   sds <- get_subdatasets(file)
+#   sos<-sds[1] %>% 
+#     raster() %>% 
+#     flip(direction = "y") %>% 
+#     `extent<-` (c(-180,180,-90,90)) %>% 
+#     `projection<-` (CRS("+proj=longlat +datum=WGS84")) %>% 
+#     crop( extent_sp)
+#   sos[sos<=0]<-NA
+#   sos[sos>365]<-NA
+#   mask<-sds[26] %>% 
+#     raster() %>% 
+#     flip(direction = "y") %>% 
+#     `extent<-` (c(-180,180,-90,90)) %>% 
+#     `projection<-` (CRS("+proj=longlat +datum=WGS84"))%>% 
+#     crop( extent_sp)
+#   mask[mask>3]<-NA
+#   mask[!is.na(mask)]<-1
+#   sos_mask<-sos*mask
+#   
+#   coord_df_reproj %>% 
+#     dplyr::select(lon, lat) %>% 
+#     mutate(sos=raster::extract(sos_mask,coord_sp_reproj)) %>% 
+#     mutate(year=year)
+# }
+# sos_df<-bind_rows(sos_df_list)
+# sos_df
+# write_rds(sos_df, "./empirical/bird/data/sos.rds")
+# sos_df_goodcoord<-sos_df %>% 
+#   drop_na() %>% 
+#   group_by(lon, lat) %>% 
+#   summarise(n=n()) %>% 
+#   ungroup() %>% 
+#   filter(n>=25)
+# 
+# ggplot()+
+#   geom_polygon(
+#     data = finland, aes(x = long, y = lat, group = group),
+#     color = "darkblue", fill = "lightblue", size = .1
+#   ) +
+#   geom_point(data=sos_df_goodcoord,aes(x=lon, y=lat, col=n))+
+#   
+#   
+# sos_df<-sos_df %>% 
+#   right_join(sos_df_goodcoord %>% dplyr::select(lon, lat), by=c("lon", "lat"))
+# 
+# ggplot(sos_df %>% filter(lon==sos_df$lon[1], lat==sos_df$lat[1]))+
+#   geom_point(aes(x=year, y=sos))
 
 ###
 extent_sp<-extent(coord_df_reproj$lon %>% min()-1,
@@ -248,7 +256,6 @@ data_df<-bird_df %>%
   #           Y=median(Y),
   #           n=n()) %>% 
   # ungroup()
-write_rds(data_df, "./empirical/bird/data/data_withcov.rds")
 
 data_agg_df<-data_df %>% 
   left_join(hex_df, by=c("X", "Y")) %>% 
@@ -350,8 +357,8 @@ p_func<-ggplot(data_agg_df%>% filter(species==sp_vis))+
   geom_point(aes(x=mat, y=bh, col=period), alpha=0.1)+
   geom_smooth(aes(x=mat, y=bh,group=period, col=period), method="lm")+
   theme_classic()+
-  xlab("MAT (°C)")+
-  ylab("BBS (day of year)")+
+  xlab("Mean annual temperature (°C)")+
+  ylab("Nestling ringing time (day of year)")+
   labs(color='Time period')
 p_func
 
@@ -443,6 +450,13 @@ p_pred<-ggplot(data_mis  %>% filter(species==sp_vis))+
   # geom_errorbarh(aes(y=bh, xmin=lower, xmax=upper), alpha=0.5)+
   # geom_smooth(aes(x=predict, y=bh), method="lm")+
   geom_abline(intercept = 0, slope=1, col="red")+
+  geom_text(data=data_mis  %>% 
+              filter(species==sp_vis) %>% 
+              group_by(period) %>% 
+              summarise(median=quantile(resid, 0.5),
+                        lower=quantile(resid, 0.025),
+                        upper=quantile(resid, 0.975)),
+            aes(x=182, y=220, label=paste0("Ymis=",round(median,2),"(", round(lower,2),", ", round(upper,2),")")), col="blue")+
   # ggpubr::stat_cor(
   #   aes(
   #     x=predict, y=bh,
@@ -457,8 +471,8 @@ p_pred<-ggplot(data_mis  %>% filter(species==sp_vis))+
   theme_classic()+
   facet_wrap(.~period, nrow=1)+
   guides(col="none")+
-  xlab("Predicted BBS (day of year)")+
-  ylab("Observed BBS (day of year)")
+  xlab("Predicted nestling ringing time (day of year)")+
+  ylab("Observed nestling ringing time (day of year)")
 p_pred
 
 # test if mismatch is different from 0
@@ -493,16 +507,16 @@ p_mis<-ggplot()+
   # geom_violin(data=data_mis %>% filter(period=="late"),
   #             aes(x=as.factor("all species"),y=resid), fill="grey", draw_quantiles = 0.5)+
   geom_violin(data=data_mis %>% filter(period=="late"),
-              aes(x=species,y=resid, col=species), draw_quantiles = 0.5)+
+              aes(x=reorder(species, desc(species)),y=resid, col=species), draw_quantiles = 0.5)+
   geom_violin(data=data_mis %>% filter(period=="late") %>% left_join(t_df, by="species") %>% filter(p<0.05),
-              aes(x=species,y=resid, fill=species), draw_quantiles = 0.5)+
+              aes(x=reorder(species, desc(species)),y=resid, fill=species), draw_quantiles = 0.5)+
   # geom_violin(data=data_mis %>% filter(period=="late"),
   #             aes(x=mig,y=resid), fill="grey", draw_quantiles = 0.5)+
   geom_hline(yintercept = 0)+
   theme_classic()+
   guides(col="none", fill="none")+
   coord_flip()+
-  ylab("Deviation of observed FS from predicted FS (day)")+
+  ylab("Deviation of observed nestling ringing time \n from predicted nestling ringing time (day)")+
   xlab ("Species")+
   theme(axis.text.y =element_text(face="italic")) 
 p_mis
@@ -580,18 +594,18 @@ p_area<-ggplot()+
   ylab("Difference between observed and predicted BBS (day)")
 p_area
 
-cairo_pdf("./empirical/bird/figure.pdf", width = 10, height = 10)
-grid.arrange(annotate_figure(p_map, fig.lab = "(a)"),
-             annotate_figure(p_func, fig.lab = "(b)"),
-             annotate_figure(p_pred, fig.lab = "(c)"),
-             annotate_figure(p_mis, fig.lab = "(d)"),
+cairo_pdf("./empirical/bird/figure.pdf", width = 10, height = 12)
+grid.arrange(annotate_figure(p_map, fig.lab = "a"),
+             annotate_figure(p_func, fig.lab = "b"),
+             annotate_figure(p_pred, fig.lab = "c"),
+             annotate_figure(p_mis, fig.lab = "d"),
              # annotate_figure(p_area, fig.lab = "(e)"),
              layout_matrix = rbind(
                c(1, 4),
                c(2, 4),
                c(3, 4)
              ),
-             widths=c(2,3),
+             widths=c(1,1),
              heights=c(3,2,2)
 )
 dev.off()

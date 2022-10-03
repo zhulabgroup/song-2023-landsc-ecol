@@ -1,3 +1,6 @@
+library(tidyverse)
+library(gridExtra)
+library(ggpubr)
 ### Plants and climate
 # source: https://harvardforest1.fas.harvard.edu/exist/apps/datasets/showData.html?id=HF309
 # pfl: peak flower
@@ -45,7 +48,7 @@ usa <- map2SpatialPolygons(usa, IDs = IDs, proj4string = CRS("+proj=longlat +dat
 area <- extent(min(data_df$lon) - 0.5, max(data_df$lon) + 0.5, min(data_df$lat) - 0.5, max(data_df$lat) + 0.5)
 usa_crop <- crop(usa, area)
 
-sp_vis<-"Aquilegia_canadensis"
+sp_vis<-"Aquilegia canadensis"
 p_map <- ggplot() +
   geom_polygon(
     data = usa_crop, aes(x = long, y = lat, group = group),
@@ -107,8 +110,8 @@ p_func<-ggplot(data_df %>% filter(species==sp_vis))+
   # facet_wrap(.~species)+
   theme(legend.position="bottom")+
   labs(color='Time period') +
-  xlab("SMT (°C)")+
-  ylab("FS (day of year)")
+  xlab("Spring mean temperature (°C)")+
+  ylab("Flowering time (day of year)")
 p_func
 
 # calculate mismatch
@@ -181,12 +184,26 @@ data_mis %>%
             lower=quantile(value, 0.025),
             upper=quantile(value, 0.975))
   
+data_mis  %>% 
+  filter(species==sp_vis) %>% 
+  group_by(period) %>% 
+  summarise(median=quantile(resid, 0.5),
+            lower=quantile(resid, 0.025),
+            upper=quantile(resid, 0.975))
 
 # plot mismatch
 p_pred<-ggplot(data_mis  %>% filter(species==sp_vis))+
   geom_point(aes(x=predict, y=fl), alpha=0.5)+
   # geom_errorbarh(aes(y=fl, xmin=lower, xmax=upper), alpha=0.5)+
   geom_abline(intercept = 0, slope=1, col="red")+
+  geom_text(data=data_mis  %>% 
+              filter(species==sp_vis) %>% 
+              group_by(period) %>% 
+              summarise(median=quantile(resid, 0.5),
+                        lower=quantile(resid, 0.025),
+                        upper=quantile(resid, 0.975)),
+            # aes(x=120, y=250, label=paste0("Ymis=",round(median,2),"(", round(lower,2),", ", round(upper,2),")")), col="blue")+
+  aes(x=150, y=250, label=paste0("Ymis=",round(median,2),"(", round(lower,2),", ", round(upper,2),")")), col="blue")+
   # ggpubr::stat_cor(
   #   aes(
   #     x=predict, y=fl,
@@ -201,8 +218,8 @@ p_pred<-ggplot(data_mis  %>% filter(species==sp_vis))+
   theme_classic()+
   facet_wrap(.~period, nrow=1)+
   guides(col="none")+
-  xlab("Predicted FS (day of year)")+
-  ylab("Observed FS (day of year)")
+  xlab("Predicted flowering time (day of year)")+
+  ylab("Observed flowering time (day of year)")
 p_pred
 
 # ggplot(data_mis %>% filter(period=="late"))+
@@ -273,23 +290,23 @@ p_mis<-ggplot()+
   # geom_violin(data=data_mis %>% filter(period=="late"),
   #             aes(x=as.factor("all species"),y=resid), fill="grey", draw_quantiles = 0.5)+
   geom_violin(data=data_mis %>% filter(period=="late"),
-              aes(x=species,y=resid, col=species), draw_quantiles = 0.5)+
+              aes(x=reorder(species, desc(species)),y=resid, col=species), draw_quantiles = 0.5)+
   geom_violin(data=data_mis %>% filter(period=="late") %>% left_join(t_df, by="species") %>% filter(p<0.05),
-              aes(x=species,y=resid, fill=species), draw_quantiles = 0.5)+
+              aes(x=reorder(species, desc(species)),y=resid, fill=species), draw_quantiles = 0.5)+
   geom_hline(yintercept = 0)+
   theme_classic()+
   guides(col="none", fill="none")+
   coord_flip()+
-  ylab("Deviation of observed FS from predicted FS (day)")+
+  ylab("Deviation of observed flowering time from predicted flowering time (day)")+
   xlab ("Species")+
   theme(axis.text.y =element_text(face="italic")) 
 p_mis
 
 cairo_pdf("./empirical/herbarium/figure.pdf", width = 10, height = 10)
-grid.arrange(annotate_figure(p_map, fig.lab = "(a)"),
-             annotate_figure(p_func, fig.lab = "(b)"),
-             annotate_figure(p_pred, fig.lab = "(c)"),
-             annotate_figure(p_mis, fig.lab = "(d)"),
+grid.arrange(annotate_figure(p_map, fig.lab = "a"),
+             annotate_figure(p_func, fig.lab = "b"),
+             annotate_figure(p_pred, fig.lab = "c"),
+             annotate_figure(p_mis, fig.lab = "d"),
              layout_matrix = rbind(
                c(1, 3),
                c(2, 4)
