@@ -69,8 +69,8 @@ p_ts<-
   scale_color_manual(values = colors)+
   scale_fill_manual(values = colors)+
   guides(fill=F)+
-  labs(x = "date",
-       y = "phenological mismatch",
+  labs(x = "Date",
+       y = "Phenological mismatch",
        color = "") +
   theme(legend.position="top") +
   facet_wrap(.~param_v, ncol=1, scales = "free_y")

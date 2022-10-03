@@ -3,12 +3,20 @@
 #                    upper=quantile(pheno, 1, na.rm=T)) %>% 
 #   mutate(range=as.numeric(upper-lower))
 
-combine_df_ori_fit<-combine_df_ori %>% filter(year <=midyear)
-combine_df_ori_fore<-combine_df_ori %>% filter(year >midyear)
-if(path=="./simulations/") {
   
   dir.create(paste0(path, "output"), recursive = T)
   write_csv(combine_df_ori,paste0(path, "output/",param,".csv"))
+  
+  
+  combine_df_ori<-read_csv(paste0(path, "output/",param,".csv"),col_types = str_c(c("D", rep("d", 15)), collapse="") )
+  combine_df_ori_fit<-combine_df_ori %>% filter(year <=midyear)
+  combine_df_ori_fore<-combine_df_ori %>% filter(year >midyear)
+  
+  df_upper_lower<-vector(mode="list")
+  for (j in 1:length(var_list)) {
+    df_upper_lower[[j]]<-read_csv(paste0(path_sub, "scaling/", j, ".csv"))
+    print(j)
+  }
   
   theo_mismatch<-data.frame(compare_stats( obs_ori=combine_df_ori_fore$pheno, pred_ori=combine_df_ori_fore$pheno_mis, range=df_upper_lower[[1]]$range[1]))%>% 
     mutate(cat="theo_mismatch")
@@ -28,26 +36,8 @@ if(path=="./simulations/") {
     mutate(param_v=param_name[[param]])
   # dir.create(paste0(path, "output"), recursive = T)
   # write_csv(stats_df,paste0(path, "output/",param,".csv"))
-}
-if(path=="./phenocam/") {
-  stats_list[[r]]<-bind_rows(data.frame(compare_stats( obs_ori=combine_df_ori_fit$value, pred_ori=combine_df_ori_fit$pheno,range=df_upper_lower[[1]]$range)) %>% 
-    mutate(cat="fit"),
-    data.frame(compare_stats( obs_ori=combine_df_ori_fore$value, pred_ori=combine_df_ori_fore$pheno,range=df_upper_lower[[1]]$range)) %>% 
-    mutate(cat="fore"))%>% 
-    mutate(cat=factor(cat, levels=c("fit", "fore"))) %>% 
-    gather(key="stats", value="value",-cat ) %>% 
-    spread(key="cat", value="value") %>% 
-    mutate(stats=factor(stats, levels=c("corr", "R2", "RMSE", "nRMSE"))) %>% 
-    arrange(stats) %>% 
-    mutate(change=fore-fit) %>% 
-  mutate(type=type,
-         roi=roi) 
-  
-}
 
-
-if(path=="./simulations/") {
-  p1<-
+    p1<-
     ggplot(param_all)+
     geom_line(aes(x=temp_summ, y=param), col="blue")+
     # geom_line(aes(x=temp_summ, y=param_mis), col="red")+
@@ -70,7 +60,7 @@ if(path=="./simulations/") {
     )+
     geom_line(aes(x=doy, y=value, group=year, col=temp_summ), alpha=0.5)+
     theme_classic()+
-    labs(x="day of year",
+    labs(x="Time (day of year)",
          y=pheno_name[[param]],
          color=env_name[[param]])+
     theme(legend.position="bottom")+
@@ -86,7 +76,7 @@ if(path=="./simulations/") {
     # geom_line(data=param_all ,aes(x=year, y=param, group=site, col=site))+
     theme_classic()+
     scale_color_manual(values = colors)+
-    labs(x = "year",
+    labs(x = "Time (year)",
          y = param_name[[param]],
          color = "") +
     theme(legend.position="top") 
@@ -105,7 +95,7 @@ if(path=="./simulations/") {
     scale_color_manual(values = colors)+
     scale_fill_manual(values = colors)+
     guides(fill=F)+
-    labs(x = "date",
+    labs(x = "Time (date)",
          y = pheno_name[[param]],
          color = "") +
     theme(legend.position="top") 
@@ -124,17 +114,22 @@ if(path=="./simulations/") {
     scale_color_manual(values = colors)+
     scale_fill_manual(values = colors)+
     guides(fill=F)+
-    labs(x = "date",
-         y = "phenological mismatch",
+    labs(x = "Time (date)",
+         y = "Phenological mismatch",
          color = "") +
     theme(legend.position="top") 
   
   cairo_pdf(paste0(path, "output/",param,".pdf"), height=8.5, width=11)
-  grid.arrange(annotate_figure(p1, fig.lab = "A", fig.lab.pos = "top.left", fig.lab.face = "bold"),
-               annotate_figure(p2, fig.lab = "C", fig.lab.pos = "top.left", fig.lab.face = "bold"),
-               annotate_figure(p3, fig.lab = "B", fig.lab.pos = "top.left", fig.lab.face = "bold"),
-               annotate_figure(p4, fig.lab = "D", fig.lab.pos = "top.left", fig.lab.face = "bold"),
-               annotate_figure(p5, fig.lab = "E", fig.lab.pos = "top.left", fig.lab.face = "bold"),
+  grid.arrange(annotate_figure(p1, fig.lab = "a", fig.lab.pos = "top.left"#, fig.lab.face = "bold"
+                               ),
+               annotate_figure(p2, fig.lab = "c", fig.lab.pos = "top.left"#, fig.lab.face = "bold"
+                               ),
+               annotate_figure(p3, fig.lab = "b", fig.lab.pos = "top.left"#, fig.lab.face = "bold"
+                               ),
+               annotate_figure(p4, fig.lab = "d", fig.lab.pos = "top.left"#, fig.lab.face = "bold"
+                               ),
+               annotate_figure(p5, fig.lab = "e", fig.lab.pos = "top.left"#, fig.lab.face = "bold"
+                               ),
                layout_matrix=rbind(c(1,3,3,3),
                                    c(2,4,4,4),
                                    c(2,5,5,5))
@@ -167,39 +162,3 @@ if(path=="./simulations/") {
   #   dySeries(c("est_mis_ts_lower","est_mis_ts","est_mis_ts_upper"), label = "estimated mismatch", col="darkred") %>%
   #   dySeries("pred_err_ts", label = "predictive error", col="darkblue") %>%
   #   dyRangeSelector()
-}
-if (path=="./phenocam/") {
-  p<-
-    ggplot(combine_df_ori)+
-    geom_line(aes(x=date, y=pheno, col="observed phenology"),alpha=0.5)+
-    geom_line(aes(x=date, y=value, col="predicted phenology"))+
-    geom_ribbon(aes(x=date, ymin=pheno, ymax=pheno, fill="observed phenology"),alpha=0.25)+
-    geom_ribbon(aes(x=date, ymin=lower, ymax=upper, fill="predicted phenology"),alpha=0.25)+
-    theme_classic()+
-    geom_vline(xintercept =as.Date(paste0(midyear+1,"-01-01") ), alpha=0.5)+
-    guides(fill="none")+
-    labs(x = "date",
-         y = "GCC",
-         color = "") +
-    theme(legend.position="top") 
-  
-  # ggplot(combine_df_ori %>% drop_na(value) %>% mutate(doy=as.numeric(format(date, "%j"))))+
-  #   geom_line(aes(x=doy, y=pheno, lty="observed phenology", group=year, col=year))+
-  #   geom_line(aes(x=doy, y=value, lty="predicted phenology", group=year, col=year))+
-  #   geom_ribbon(aes(x=doy, ymin=pheno, ymax=pheno, fill=year, group=year),alpha=0.25)+
-  #   geom_ribbon(aes(x=doy, ymin=lower, ymax=upper, fill=year, group=year),alpha=0.25)+
-  #   theme_classic()+
-  #   guides(fill="none")+
-  #   labs(x = "date",
-  #        y = "GCC",
-  #        color = "") +
-  #   theme(legend.position="top")+
-  #   scale_color_viridis_c()+
-  #   facet_wrap(.~year, ncol=1)
-  
-  dir.create(paste0(path, "output/eachroi"), recursive = T)
-  cairo_pdf(paste0(path,"output/eachroi/", type, "_", roi,".pdf"))
-  print(p)
-  dev.off()
-}
-

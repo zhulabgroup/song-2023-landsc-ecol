@@ -46,7 +46,9 @@ p_temp<-
   geom_line(aes(x=date, y=temp, group=site, col=site))+
   theme_classic()+
   theme(legend.position="right")+
-  ylab ("Temperature (°C)")
+  ylab ("Temperature (°C)")+
+  xlab ("Time (date)")+
+  labs(col="Site")
 cairo_pdf(paste0(path,"output/temp.pdf"), width = 11, height=4)
 print (p_temp)
 dev.off()
