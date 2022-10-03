@@ -297,7 +297,7 @@ p_mis<-ggplot()+
   theme_classic()+
   guides(col="none", fill="none")+
   coord_flip()+
-  ylab("Deviation of observed flowering time from predicted flowering time (day)")+
+  ylab("Deviation of observed flowering time \n from predicted flowering time (day)")+
   xlab ("Species")+
   theme(axis.text.y =element_text(face="italic")) 
 p_mis
