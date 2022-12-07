@@ -28,7 +28,7 @@ for (p in 1:length(param_list)) {
   
   # use first half to train model
   source(paste0(path, "code/steps/22 prepare embeddings.R"))
-  source(paste0(path, "code/steps/23 train GP model.R"))
+  source(paste0(path, "code/steps/23 train GP model.R")) # make output look better
   
   # predict for whole duration
   source(paste0(path, "code/steps/24 fit.R"))
@@ -37,7 +37,7 @@ for (p in 1:length(param_list)) {
   source(paste0(path, "code/steps/25 output table and figure.R"))
 }
 
-closeAllConnections()
+stopCluster(cl)
 
 ts_df_list<-vector(mode="list", length=length(param_list))
 for (p in 1:length(param_list)) {
@@ -53,7 +53,7 @@ for (p in 1:length(param_list)) {
     mutate(param_v=param_name[[param]])
 }
 ts_df<-bind_rows(ts_df_list)%>% 
-  mutate(param_v=factor(param_v, levels=c("summer-winter difference", "timing of spring onset", "slope of curve in spring", "pace of life cycles") )) 
+  mutate(param_v=factor(param_v, levels=c("Summer-winter difference", "Timing of spring onset", "Slope of curve in spring", "Number of life cycles") )) 
 
 colors <- c("simulated mismatch" = "purple",
             "estimated mismatch" = "dark red",
@@ -80,7 +80,7 @@ mismatch_df<-bind_rows(stats_list) %>%
   mutate(stats=factor(stats, levels=c("corr", "R2", "RMSE", "nRMSE"))) %>% 
   rowwise() %>% 
   mutate(param_v=param_name[[param]]) %>% 
-  mutate(param_v=factor(param_v, levels=c("summer-winter difference", "timing of spring onset", "slope of curve in spring", "pace of life cycles") %>% rev())) 
+  mutate(param_v=factor(param_v, levels=c("Summer-winter difference", "Timing of spring onset", "Slope of curve in spring", "Number of life cycles") %>% rev())) 
 
 write_csv(mismatch_df, paste0(path, "output/mismatch.csv"))
 

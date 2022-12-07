@@ -94,7 +94,7 @@
     # geom_vline(xintercept =as.Date(paste0(midyear+1,"-01-01") ), alpha=0.5)+
     scale_color_manual(values = colors)+
     scale_fill_manual(values = colors)+
-    guides(fill=F)+
+    guides(fill="none")+
     labs(x = "Time (date)",
          y = pheno_name[[param]],
          color = "") +
@@ -113,7 +113,7 @@
     # geom_vline(xintercept =as.Date(paste0(midyear+1,"-01-01") ), alpha=0.5)+
     scale_color_manual(values = colors)+
     scale_fill_manual(values = colors)+
-    guides(fill=F)+
+    guides(fill="none")+
     labs(x = "Time (date)",
          y = "Phenological mismatch",
          color = "") +

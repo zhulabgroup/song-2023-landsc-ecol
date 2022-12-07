@@ -8,8 +8,9 @@ library(xts)
 library(ggpubr)
 library(ggrepel)
 library(dygraphs)
-library(phenocamapi)
-library(daymetr)
+library(rlist)
+library(ptw)
+library(RhpcBLASctl)
 
 waves<-function (t, t_start,
                  intercept, slope, 

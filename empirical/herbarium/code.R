@@ -41,12 +41,13 @@ sp_list<-data_df %>%
 data_df<-data_df %>% filter(species %in% sp_list)
 # visualize data
 library(maps)
+library(maptools)
 usa <- map("state", fill = TRUE)
 IDs <- sapply(strsplit(usa$names, ":"), function(x) x[1])
 usa <- map2SpatialPolygons(usa, IDs = IDs, proj4string = CRS("+proj=longlat +datum=WGS84"))
 
-area <- extent(min(data_df$lon) - 0.5, max(data_df$lon) + 0.5, min(data_df$lat) - 0.5, max(data_df$lat) + 0.5)
-usa_crop <- crop(usa, area)
+area <- raster::extent(min(data_df$lon) - 0.5, max(data_df$lon) + 0.5, min(data_df$lat) - 0.5, max(data_df$lat) + 0.5)
+usa_crop <- raster::crop(usa, area)
 
 sp_vis<-"Aquilegia canadensis"
 p_map <- ggplot() +
@@ -115,6 +116,8 @@ p_func<-ggplot(data_df %>% filter(species==sp_vis))+
 p_func
 
 # calculate mismatch
+library(parallel)
+library(doSNOW)
 cl <- makeCluster(20, outfile = "")
 registerDoSNOW(cl)
 data_df_new_list<-
@@ -301,6 +304,18 @@ p_mis<-ggplot()+
   xlab ("Species")+
   theme(axis.text.y =element_text(face="italic")) 
 p_mis
+
+data_mis %>% filter(period=="late") %>% 
+  group_by(species) %>% 
+  summarise(median=median(resid)) %>% 
+  pull(median) %>% 
+  t.test()
+
+library(nlme)
+lme.fit <- lme((resid) ~ 1, random = ~ 1 | species,
+               data = data_mis %>% filter(period=="late") %>%
+                 mutate(x=jitter(x, amount=0.000001), y=jitter(y, amount=0.000001)) )
+summary(lme.fit)
 
 cairo_pdf("./empirical/herbarium/figure.pdf", width = 10, height = 10)
 grid.arrange(annotate_figure(p_map, fig.lab = "a"),

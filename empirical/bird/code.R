@@ -1,7 +1,10 @@
 # source: https://datadryad.org/stash/dataset/doi:10.5061/dryad.wstqjq2ht
 library(raster)
-library(gdalUtils)
 library(maptools)
+library(gridExtra)
+library(tidyverse)
+library(ggpubr)
+
 bird_df<-read_csv("./empirical/bird/data/73_species.csv")  %>% 
   dplyr::select(
     nestid=NestID,
@@ -66,20 +69,21 @@ size <- 100000
 # size <- 1.5 # used for supplementary analysis. When doing so, add "_1.5" to file names.
 # size <- 0.5 # used for supplementary analysis. When doing so, add "_0.5" to file names.
 hex_points <- spsample(coord_sp, type = "hexagonal", cellsize = size, offset = c(0, 0))
+hex_points$id<-1:length(hex_points)
 hex_grid <- HexPoints2SpatialPolygons(hex_points, dx = size)
+hex_grid$id<-1:length(hex_grid)
 plot(finland_reproj, col = "grey50", bg = "light blue", axes = TRUE)
 plot(hex_points, col = "black", pch = 20, cex = 0.5, add = T)
 plot(hex_grid, border = "orange", add = T)
 
-
-plot_hex <- spatialEco::point.in.poly(coord_sp, hex_grid)
+library(sf)
+plot_hex <- st_intersection(coord_sp%>% st_as_sf(), hex_grid%>% st_as_sf())
 hex_df<-plot_hex %>% 
-  data.frame() %>% 
-  dplyr::select(X, Y,hexagon=poly.ids) %>% 
+  as_tibble() %>% 
+  dplyr::select(X, Y,hexagon=id) %>% 
   left_join(hex_points %>% 
-              data.frame() %>% 
-              rename(hex.x=x, hex.y=y) %>% 
-              mutate(hexagon=row_number()),
+              as_tibble() %>% 
+              rename(hex.x=x, hex.y=y, hexagon=id) ,
             by="hexagon") %>% 
   mutate(hexagon = as.factor(hexagon)) %>% 
   mutate(hexagon=fct_shuffle(hexagon))
@@ -133,79 +137,7 @@ p_map<-ggplot()+
 
 p_map
 
-# ### vipphen SOS
-# extent_sp<-extent(coord_df_reproj$lon %>% min()-1,
-#                   coord_df_reproj$lon %>% max()+1,
-#                   coord_df_reproj$lat %>% min()-1,
-#                   coord_df_reproj$lat %>% max()+1) %>% 
-#   as('SpatialPolygons') %>% 
-#   `projection<-` (CRS("+proj=longlat +datum=WGS84"))
-# 
-# files<-list.files("/data/ZHULAB/phenology/VIPPHEN", pattern =".hdf", full.names = T) %>% sort()
-# 
-# cl <- makeCluster(20, outfile = "")
-# registerDoSNOW(cl)
-# sos_df_list<-
-# foreach (file = files,
-#          .packages = c("gdalUtils", "raster", "tidyverse")) %dopar% {
-#   year<-file %>% 
-#     str_split(pattern = "/") %>% 
-#     unlist() %>% 
-#     tail(1) %>% 
-#     str_split(pattern = "\\.") %>% 
-#     unlist() %>% 
-#     .[2] %>% 
-#     str_replace("A", "") %>% 
-#     as.numeric()
-#   sds <- get_subdatasets(file)
-#   sos<-sds[1] %>% 
-#     raster() %>% 
-#     flip(direction = "y") %>% 
-#     `extent<-` (c(-180,180,-90,90)) %>% 
-#     `projection<-` (CRS("+proj=longlat +datum=WGS84")) %>% 
-#     crop( extent_sp)
-#   sos[sos<=0]<-NA
-#   sos[sos>365]<-NA
-#   mask<-sds[26] %>% 
-#     raster() %>% 
-#     flip(direction = "y") %>% 
-#     `extent<-` (c(-180,180,-90,90)) %>% 
-#     `projection<-` (CRS("+proj=longlat +datum=WGS84"))%>% 
-#     crop( extent_sp)
-#   mask[mask>3]<-NA
-#   mask[!is.na(mask)]<-1
-#   sos_mask<-sos*mask
-#   
-#   coord_df_reproj %>% 
-#     dplyr::select(lon, lat) %>% 
-#     mutate(sos=raster::extract(sos_mask,coord_sp_reproj)) %>% 
-#     mutate(year=year)
-# }
-# sos_df<-bind_rows(sos_df_list)
-# sos_df
-# write_rds(sos_df, "./empirical/bird/data/sos.rds")
-# sos_df_goodcoord<-sos_df %>% 
-#   drop_na() %>% 
-#   group_by(lon, lat) %>% 
-#   summarise(n=n()) %>% 
-#   ungroup() %>% 
-#   filter(n>=25)
-# 
-# ggplot()+
-#   geom_polygon(
-#     data = finland, aes(x = long, y = lat, group = group),
-#     color = "darkblue", fill = "lightblue", size = .1
-#   ) +
-#   geom_point(data=sos_df_goodcoord,aes(x=lon, y=lat, col=n))+
-#   
-#   
-# sos_df<-sos_df %>% 
-#   right_join(sos_df_goodcoord %>% dplyr::select(lon, lat), by=c("lon", "lat"))
-# 
-# ggplot(sos_df %>% filter(lon==sos_df$lon[1], lat==sos_df$lat[1]))+
-#   geom_point(aes(x=year, y=sos))
-
-###
+### extract climate data (do this once and save the output)
 extent_sp<-extent(coord_df_reproj$lon %>% min()-1,
                   coord_df_reproj$lon %>% max()+1,
                   coord_df_reproj$lat %>% min()-1,
@@ -213,16 +145,16 @@ extent_sp<-extent(coord_df_reproj$lon %>% min()-1,
   as('SpatialPolygons') %>% 
   `projection<-` (CRS("+proj=longlat +datum=WGS84"))
 
-bri<-brick("/data/ZHULAB/phenology/Velocity/TerraClimate/MAT_0.05degree.nc")
+terraclim_path<-"/nfs/turbo/seas-zhukai/climate/TerraClimate/individual_years/"
 
 cl <- makeCluster(20, outfile = "")
 registerDoSNOW(cl)
 
 mat_df_list<-
-  foreach (year = (bird_df$year %>% min()):2015,
-           .packages = c("gdalUtils", "raster", "tidyverse")) %dopar% {
+  foreach (year = (bird_df$year %>% min()):2021,
+           .packages = c("raster", "tidyverse")) %dopar% {
              
-             mat_ras<-bri[[year-1958+1]] %>% 
+             mat_ras<-raster(paste0(terraclim_path,"metric/MAT_1_24degree_",year,".tif")) %>% 
                crop( extent_sp)
              
              coord_df_reproj %>% 
@@ -234,9 +166,7 @@ mat_df<-bind_rows(mat_df_list)
 mat_df
 write_rds(mat_df, "./empirical/bird/data/mat.rds")
 
-# sos_df<-read_rds("./empirical/bird/data/sos.rds")
 mat_df<-read_rds("./empirical/bird/data/mat.rds")
-# year_list<-bird_df$year %>% unique() %>% sort()
 data_df<-bird_df %>% 
   # group_by(X, Y,species_short,area, period,species, mig, coordid, lon, lat, year) %>% 
   # summarise(bh=mean(bh)) %>% 
@@ -259,7 +189,7 @@ data_df<-bird_df %>%
 
 data_agg_df<-data_df %>% 
   left_join(hex_df, by=c("X", "Y")) %>% 
-  group_by(species, mig, year, period, hexagon, hex.x, hex.y) %>% 
+  group_by(species, mig, area, year, period, hexagon, hex.x, hex.y) %>% 
   summarise(bh=median(bh, na.rm=T),
             mat=median(mat, na.rm=T),
             n=n()) %>% 
@@ -369,7 +299,7 @@ foreach (sp = sp_list,
            data_sp<-data_agg_df %>% 
              filter(species  == sp) %>% 
              drop_na() %>% 
-             dplyr::select(x=hex.x, y=hex.y, mat, bh, period, species, mig, year)
+             dplyr::select(x=hex.x, y=hex.y, mat, bh, period, species, mig, year, area)
            ### Fit nonspatial and spatial model
            
            # Prepare data frame
