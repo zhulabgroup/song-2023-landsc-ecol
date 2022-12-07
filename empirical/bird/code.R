@@ -68,6 +68,7 @@ finland_andmore_reproj_crop <- crop(finland_andmore_reproj, area)
 size <- 100000
 # size <- 1.5 # used for supplementary analysis. When doing so, add "_1.5" to file names.
 # size <- 0.5 # used for supplementary analysis. When doing so, add "_0.5" to file names.
+set.seed(1)
 hex_points <- spsample(coord_sp, type = "hexagonal", cellsize = size, offset = c(0, 0))
 hex_points$id<-1:length(hex_points)
 hex_grid <- HexPoints2SpatialPolygons(hex_points, dx = size)
@@ -295,6 +296,7 @@ p_func
 data_df_new_list<-
 foreach (sp = sp_list,
          .packages = c("tidyverse", "spBayes", "gstat", "raster")) %dopar% {
+           set.seed(42)
            # spatial regression
            data_sp<-data_agg_df %>% 
              filter(species  == sp) %>% 
@@ -451,32 +453,16 @@ p_mis<-ggplot()+
   theme(axis.text.y =element_text(face="italic")) 
 p_mis
 
-
-ggplot(data_mis %>% filter(period=="late") %>%
-         left_join(t_df, by="species") %>%
-         filter(estimate<0 & p<0.05) )+
-  # geom_point(aes(x=y, y=resid, col=species), alpha=0.1)+
-  geom_smooth(aes(x=y, y=resid, col=species), method="lm")+
-  ggpubr::stat_cor(
-    aes(
-      x=y, y=resid,
-      label = paste( ..rr.label..,..p.label.., sep = "*`,`~")
-    ),
-    p.accuracy = 0.05,
-    label.x.npc = "left",
-    label.y.npc = "top",
-    show.legend = F,
-    col = "blue"
-  ) +
-  geom_hline(yintercept = 0, lty=2)+
-  theme_classic()+
-  # facet_wrap(.~species, scales="free")+
-  guides(col="none")
+data_mis %>% filter(period=="late") %>% 
+  group_by(species) %>% 
+  summarise(median=median(resid)) %>% 
+  pull(median) %>% 
+  t.test()
 
 library(nlme)
 # lme.fit <- lme(resid ~ y, random = ~ 1 + y | species, data = data_mis %>% filter(period=="late"))
 # summary(lme.fit)
-lme.fit <- lme(abs(resid) ~ y, random = ~ 1+y | species,
+lme.fit <- lme(abs(resid) ~ 1, random = ~ 1 | species,
                # corr = corSpatial(form = ~x + y, type ="exponential", nugget = T),
                data = data_mis %>% filter(period=="late") %>%
                  # left_join(t_df, by="species") %>%

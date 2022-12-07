@@ -124,6 +124,7 @@ data_df_new_list<-
   foreach (sp = sp_list,
            .packages = c("tidyverse", "spBayes", "gstat", "raster")) %dopar% {
              
+             set.seed(42)
              data_sp<-data_df %>% 
                filter(species==sp) %>% 
                drop_na() %>% 
@@ -197,6 +198,7 @@ data_mis  %>%
 # plot mismatch
 p_pred<-ggplot(data_mis  %>% filter(species==sp_vis))+
   geom_point(aes(x=predict, y=fl), alpha=0.5)+
+  # geom_smooth(aes(x=predict, y=fl), lty=2, method="lm")+
   # geom_errorbarh(aes(y=fl, xmin=lower, xmax=upper), alpha=0.5)+
   geom_abline(intercept = 0, slope=1, col="red")+
   geom_text(data=data_mis  %>% 
@@ -248,7 +250,7 @@ data_mis %>%
 t.test(data_mis %>% 
          filter(period=="late") %>% 
          pull(resid),
-       alternative = "less")
+       alternative = "two.sided")
 
 t_df<-data_mis %>% 
   filter(period=="late") %>% 
