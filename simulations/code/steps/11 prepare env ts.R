@@ -1,5 +1,3 @@
-set.seed(42)
-
 date_list<-seq(as.Date("2021-01-01"),as.Date("2040-12-31"), by=1)
 midyear<-floor(mean(c(as.numeric(format(min(date_list), "%Y")),as.numeric(format(max(date_list), "%Y")))))
 coord_df <- data.frame(lon=0, lat=1:5)
@@ -15,6 +13,7 @@ ts_all<-
   foreach (s = 1:nrow(coord_df),
            .packages = c("lubridate", "tidyverse")
   ) %dopar% {
+    set.seed(42)
     # library(lubridate, lib.loc = "/usr/lib64/R/library")
     # library(tidyverse, lib.loc = "/usr/lib64/R/library")
     temp<-rep(NA, length(date_list))

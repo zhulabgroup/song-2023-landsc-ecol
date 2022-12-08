@@ -18,18 +18,18 @@ if (length(missing_id)>0) {
   D_all<-D_all[-missing_id,,drop=F]
 }
 
-train_id <- sample(1:nrow(X_all), round(nrow(X_all) * 10 / 10))
-# valid_id <- setdiff(1:nrow(X_all), train_id)
+train_id <- sample(1:nrow(X_all), round(nrow(X_all) * 5 / 10))
+valid_id <- setdiff(1:nrow(X_all), train_id)
 
 X_train <- X_all[train_id, , drop = F]
 Y_train <- Y_all[train_id, , drop = F]
 P_train <- P_all[train_id, , drop = F]
 D_train <- D_all[train_id, , drop = F]
 
-# X_valid <- X_all[valid_id, , drop = F]
-# Y_valid <- Y_all[valid_id, , drop = F]
-# P_valid <- P_all[valid_id, , drop = F]
-# D_valid <- D_all[valid_id, , drop = F]
+X_valid <- X_all[valid_id, , drop = F]
+Y_valid <- Y_all[valid_id, , drop = F]
+P_valid <- P_all[valid_id, , drop = F]
+D_valid <- D_all[valid_id, , drop = F]
 
 basisnumber<-min(basisnumber, nrow(X_all))
 if (basisnumber==nrow(X_all)) {
@@ -97,6 +97,7 @@ if (epoch > 1) {
       blas_set_num_threads(1)
       omp_set_num_threads(1)
       
+      set.seed(42)
       # subset<-sample(1:nrow(X_new), nrow(X_new))
       # X_new<-X_new[subset,,drop=F]
       # P_new<-P_new[subset,,drop=F]
@@ -133,6 +134,7 @@ if (epoch > 1) {
     ) %dopar% {
       blas_set_num_threads(1)
       omp_set_num_threads(1)
+      set.seed(42)
       
       # num_sample <- 50
       pars_sample <- pars_prev_updated[, i, drop = F] %*% matrix(1, nrow = 1, ncol = num_sample) + t(rmvn(num_sample, mu = rep(0, ndim + 3), Sigma = diag(1, nrow = ndim + 3, ncol = ndim + 3)))
@@ -202,6 +204,7 @@ Rprop_res_add <-
   ) %dopar% {
     blas_set_num_threads(1)
     omp_set_num_threads(1)
+    set.seed(42)
     
     # subset<-sample(1:nrow(X_new), nrow(X_new))
     # X_new<-X_new[subset,,drop=F]
@@ -238,6 +241,7 @@ pars_var_add_updated <-
   ) %dopar% {
     blas_set_num_threads(1)
     omp_set_num_threads(1)
+    set.seed(42)
     
     # num_sample <- 50
     pars_sample <- pars_add_updated[, i, drop = F] %*% matrix(1, nrow = 1, ncol = num_sample) + t(rmvn(num_sample, mu = rep(0, ndim + 4), Sigma = diag(1, nrow = ndim + 4, ncol = ndim + 4)))
@@ -273,46 +277,39 @@ pars_id_new <- c(pars_id_prev, pars_id_add)
 ########################
 # Choose sets of hyperparameters
 ########################
-# valid_id_subset<-vector(mode="list")
-# for (n in 1:10) {
-#   valid_id_subset[[n]]<-sample(1:nrow(X_valid),100)
-# }
+valid_id_subset<-vector(mode="list")
+for (n in 1:10) {
+  valid_id_subset[[n]]<-sample(1:nrow(X_valid),100)
+}
 
-# log_p_valid_new <-
-#   foreach(
-#     i = 1:ncol(pars_new),
-#     # .export = ls(globalenv()),
-#     .export = c(
-#       "pars_new", "distMat", "priors",
-#       "X_valid", "P_valid", "Y_valid",
-#       "X_basis", "P_basis", "Y_basis",
-#       "GPSDM", "fmingrad_Rprop"
-#     ),
-#     .combine = cbind
-#   ) %dopar% {
-#     blas_set_num_threads(1)
-#     omp_set_num_threads(1)
-#     
-#     
-#     num_sample <- 50
-#     loglik_res <- rep(NA, num_sample)
-#     
-#     for (k in 1:num_sample) {
-#       minibatch <- sample(1:nrow(X_valid), min(nrow(X_valid),100))
-#       res <- GPSDM(pars = pars_new[, i, drop = F], distMat = distMat, basisX = X_basis, basisP = P_basis, basisY = Y_basis, newX = X_valid[minibatch, , drop = F], newP = P_valid[minibatch, , drop = F], newY = Y_valid[minibatch, , drop = F],priors=priors, mode = c("optimize"))
-#       loglik_res[k] <- -res$neglpost
-#       print(k)
-#     }
-#     
-#     median(loglik_res)
-#   }
+log_p_valid_new <-
+  foreach(
+    i = 1:ncol(pars_new),
+    .combine = cbind
+  ) %dopar% {
+    blas_set_num_threads(1)
+    omp_set_num_threads(1)
+    set.seed(42)
+
+    num_sample <- 50
+    loglik_res <- rep(NA, num_sample)
+
+    for (k in 1:num_sample) {
+      minibatch <- sample(1:nrow(X_valid), min(nrow(X_valid),100))
+      res <- GPSDM(pars = pars_new[, i, drop = F], distMat = distMat, basisX = X_basis, basisP = P_basis, basisD=D_basis,basisY = Y_basis, newX = X_valid[minibatch, , drop = F], newP = P_valid[minibatch, , drop = F],newD = D_valid[minibatch, , drop = F], newY = Y_valid[minibatch, , drop = F],priors=priors, mode = c("optimize"))
+      loglik_res[k] <- -res$neglpost
+      print(k)
+    }
+
+    median(loglik_res)
+  }
 
 sort_id <- rev(order(log_p_new))[1:num_part]
 pars <- pars_new[, sort_id, drop = F]
 pars_var <- pars_var_new[sort_id]
 log_p <- log_p_new[sort_id]
 pars_id <- pars_id_new[sort_id]
-# log_p_valid <- log_p_valid_new[sort_id]
+log_p_valid <- log_p_valid_new[sort_id]
 colnames(pars) <- pars_id
 
 write_csv(as.data.frame(pars), paste0(path_results, "/", "pars", ".csv"))
@@ -320,4 +317,4 @@ for (i in 1:num_part) {
   write_csv(as.data.frame(pars_var[[i]]), paste0(path_results, "/", "pars_var_", i, ".csv"))
 }
 write_csv(as.data.frame(log_p), paste0(path_results, "/", "log_p_train", ".csv"))
-# write_csv(as.data.frame(log_p_valid), paste0(path_results, "/", "log_p_valid", ".csv"))
+write_csv(as.data.frame(log_p_valid), paste0(path_results, "/", "log_p_valid", ".csv"))

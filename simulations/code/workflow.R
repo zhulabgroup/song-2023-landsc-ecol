@@ -1,4 +1,5 @@
 path<-"./simulations/"
+set.seed(1)
 source(paste0(path, "code/steps/01 utils.R"))
 source(paste0(path, "code/steps/02 settings.R"))
 

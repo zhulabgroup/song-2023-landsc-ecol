@@ -72,8 +72,8 @@ for (g in 1:length(step_groups)) {
         gather(key="particle", value="value",-t,-stat) %>% 
         spread(key="stat", value="value") %>% 
         group_by(t) %>% 
-        summarize(weighted_mean=weighted.mean(means,w=exp(log_p-mean(log_p))),
-                  weighted_variance=weighted.mean(variances, w=exp(log_p-mean(log_p)))+Hmisc::wtd.var(means,weights=exp(log_p-mean(log_p)), normwt = T))
+        summarize(weighted_mean=weighted.mean(means,w=exp(log_p_valid-mean(log_p_valid))),
+                  weighted_variance=weighted.mean(variances, w=exp(log_p_valid-mean(log_p_valid)))+Hmisc::wtd.var(means,weights=exp(log_p-mean(log_p)), normwt = T))
       
       #store prediction
       Y_fit[P_fit[s,1],t]<-res_df$weighted_mean

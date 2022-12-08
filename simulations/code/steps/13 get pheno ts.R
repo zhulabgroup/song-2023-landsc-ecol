@@ -2,6 +2,7 @@ set.seed(42)
 
 pheno_all<-
   foreach (s = 1:nrow(coord_df)) %dopar% {
+    set.seed(42)
     param_site<-param_all %>% filter(site==s)
     pheno_list<-vector(mode="list", length=nrow(param_site))
     for (y in 1:nrow(param_site)) {
