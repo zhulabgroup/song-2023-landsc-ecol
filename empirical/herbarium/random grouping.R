@@ -78,8 +78,8 @@ data_mis_new<-read_rds("./empirical/herbarium/data/mismatch_new.rds")
 
 data_mis_new %>% 
   group_by(species, random) %>% 
-  summarise (R2=cor(predict, bh)^2,
-             rmse=Metrics::rmse(predict, bh)) %>% 
+  summarise (R2=cor(predict, fl)^2,
+             rmse=Metrics::rmse(predict, fl)) %>% 
   gather(key="stat", value="value", -species, -random) %>% 
   spread(key="random", value="value") %>% 
   mutate(diff=`out-of-sample`-`in-sample`) %>% 

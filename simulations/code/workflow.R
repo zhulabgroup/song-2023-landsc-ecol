@@ -85,6 +85,8 @@ mismatch_df<-bind_rows(stats_list) %>%
 
 write_csv(mismatch_df, paste0(path, "output/mismatch.csv"))
 
+mismatch_df<-read_csv(paste0(path, "output/mismatch.csv"))
+mismatch_df %>% filter(stats=="nRMSE") %>% View()
 colors <- c("simulated mismatch" = "purple",
             "estimated mismatch" = "dark red",
             "predictive error" = "dark blue")

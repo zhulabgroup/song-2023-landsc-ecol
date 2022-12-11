@@ -219,7 +219,8 @@ data_agg_df %>%
   group_by(species) %>% 
   do(broom::tidy(lm(bh ~ year, .))) %>%
   filter(term %in% c("year")) %>%
-  filter(p.value<0.05) %>% 
+  filter(p.value<0.05,
+         estimate<0) %>% 
   summary()
 
 data_agg_df %>% 
@@ -358,10 +359,10 @@ foreach (sp = sp_list,
 }
 data_mis<-bind_rows(data_df_new_list) %>% 
   mutate(resid=bh-predict) 
-write_rds(data_mis, "./empirical/bird/data/mismatch_mat.rds")
+write_rds(data_mis, "./empirical/bird/data/mismatch.rds")
 stopCluster(cl)
 
-data_mis<-read_rds("./empirical/bird/data/mismatch_mat.rds")
+data_mis<-read_rds("./empirical/bird/data/mismatch.rds")
 
 data_mis %>% 
   group_by(species, period) %>% 
@@ -417,7 +418,7 @@ data_mis %>%
 t.test(data_mis %>% 
          filter(period=="late") %>% 
          pull(resid),
-       alternative = "less")
+       alternative = "two.sided")
 
 t_df<-data_mis %>% 
   filter(period=="late") %>% 

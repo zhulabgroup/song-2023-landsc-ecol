@@ -82,6 +82,10 @@ data_df_new_list<-
            }
 data_mis_new<-bind_rows(data_df_new_list) %>% 
   mutate(resid=bh-predict) 
+write_rds(data_mis_new, "./empirical/bird/data/mismatch_new.rds")
+stopCluster(cl)
+
+data_mis_new<-read_rds("./empirical/bird/data/mismatch_new.rds")
 
 data_mis_new %>% 
   group_by(species, random) %>% 
@@ -97,7 +101,7 @@ data_mis_new %>%
             upper=quantile(value, 0.975))
 # plot mismatch
 
-p_pred<-ggplot(data_mis_new  %>% filter(species==sp_vis))+
+p_pred_new<-ggplot(data_mis_new  %>% filter(species==sp_vis))+
   geom_point(aes(x=predict, y=bh), alpha=0.2)+
   # geom_errorbarh(aes(y=bh, xmin=lower, xmax=upper), alpha=0.5)+
   # geom_smooth(aes(x=predict, y=bh), method="lm")+
@@ -125,7 +129,7 @@ theme_classic()+
   guides(col="none")+
   xlab("Predicted nestling ringing time (day of year)")+
   ylab("Observed nestling ringing time (day of year)")
-p_pred
+p_pred_new
 
 # test if mismatch is different from 0
 data_mis_new %>% 
