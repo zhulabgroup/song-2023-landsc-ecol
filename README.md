@@ -5,17 +5,19 @@ Song, Y., Munch, S.B., & Zhu, K. (2023), Prediction-based approach for quantifyi
 
 ## User guide
 * Empirical studies: Estimating phenological mismatch on large spatial scales with empirical data
-** Case study 1: Advancement in flowering matches or outpaces spring warming in eastern US
-Run script empirical/herbarium/code.R
 
-** Case study 2: Advancement in bird breeding slightly outpaces warming trends in most species in Finland
-Run script empirical/bird/code.R
+  * Case study 1: Advancement in flowering matches or outpaces spring warming in eastern US
+  Run script empirical/herbarium/code.R
+
+  * Case study 2: Advancement in bird breeding slightly outpaces warming trends in most species in Finland
+  Run script empirical/bird/code.R
 
 * Simulation experiments: Recovering phenological mismatch with simulated continuous phenology data
+
 Run script simulations/code/workflow.R
 
 ## Session info
 ```r
-sessioninfo::session_info()
+clipr::write_clip(sessioninfo::session_info())
 ```
 
