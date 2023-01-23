@@ -8,7 +8,6 @@ path_scaling <- paste0(path_sub, "scaling/")
 df_upper_lower <- vector(mode = "list")
 for (j in 1:length(var_list)) {
   df_upper_lower[[j]] <- read_csv(paste0(path_scaling, j, ".csv"))
-  print(j)
 }
 
 # calculate statistics for predictive skills

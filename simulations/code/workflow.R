@@ -8,26 +8,6 @@ source(paste0(path, "code/steps/02 settings.R"))
 
 param_list <- c("m2", "m3", "m4", "m8")
 
-# names used in figures
-param_name <- list(
-  "m2" = "Summer-winter difference",
-  "m3" = "Timing of spring onset",
-  "m4" = "Slope of curve in spring",
-  "m8" = "Number of life cycles"
-)
-pheno_name <- list(
-  "m2" = "Net primary productivity",
-  "m3" = "Bird breeding activity",
-  "m4" = "Enhanced vegetation index",
-  "m8" = "Adult insect abundance"
-)
-env_name <- list(
-  "m2" = expression(italic(T)["1:90"]),
-  "m3" = expression(italic(T)["-90:-1"]),
-  "m4" = expression(italic(T)["1:14"]),
-  "m8" = expression(italic(T)["1:365"])
-)
-
 # fit model and save output for each parameter
 stats_list <- vector(mode = "list", length = length(param_list))
 for (p in 1:length(param_list)) {
@@ -35,15 +15,15 @@ for (p in 1:length(param_list)) {
   path_sub <- paste0(path, "archive/", param, "/")
   dir.create(path_sub, recursive = T)
 
+  # prepare environment time series
+  source(paste0(path, "code/steps/11 prepare env ts.R"))
+
+  # get phenology model parameter in each year (match and mismatch)
+  source(paste0(path, "code/steps/12 get model param.R"))
+
   if (!file.exists(paste0(path_output, param, ".csv"))) {
     cl <- makeCluster(num_part, outfile = "")
     registerDoSNOW(cl)
-
-    # prepare environment time series
-    source(paste0(path, "code/steps/11 prepare env ts.R"))
-
-    # get phenology model parameter in each year (match and mismatch)
-    source(paste0(path, "code/steps/12 get model param.R"))
 
     # get phenology time series (match and mismatch)
     source(paste0(path, "code/steps/13 get pheno ts.R"))
@@ -98,7 +78,7 @@ p_ts <-
   theme_classic() +
   scale_color_manual(values = colors) +
   scale_fill_manual(values = colors) +
-  guides(fill = F) +
+  guides(fill = "none") +
   labs(
     x = "Date",
     y = "Phenological mismatch",

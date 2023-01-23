@@ -51,41 +51,10 @@ coord_df_reproj <- as.data.frame(coord_sp_reproj) %>%
 bird_df <- bird_df %>%
   left_join(coord_df_reproj, by = c("X", "Y"))
 
-# extract climate data (do this once and save the output)
+# read mean annual temperature data at all nest locations
+# previously extracted from TerraClimate dataset
 climfile <- "./empirical/bird/data/mat.rds"
-if (!file.exists(climfile)) {
-  extent_sp <- extent(
-    coord_df_reproj$lon %>% min() - 1,
-    coord_df_reproj$lon %>% max() + 1,
-    coord_df_reproj$lat %>% min() - 1,
-    coord_df_reproj$lat %>% max() + 1
-  ) %>%
-    as("SpatialPolygons") %>%
-    `projection<-`(CRS("+proj=longlat +datum=WGS84"))
-
-  terraclim_path <- "/nfs/turbo/seas-zhukai/climate/TerraClimate/individual_years/"
-
-  cl <- makeCluster(20, outfile = "")
-  registerDoSNOW(cl)
-
-  mat_df_list <-
-    foreach(
-      year = (bird_df$year %>% min()):2021,
-      .packages = c("raster", "tidyverse")
-    ) %dopar% {
-      mat_ras <- raster(paste0(terraclim_path, "metric/MAT_1_24degree_", year, ".tif")) %>%
-        crop(extent_sp)
-
-      coord_df_reproj %>%
-        dplyr::select(lon, lat) %>%
-        mutate(mat = raster::extract(mat_ras, coord_sp_reproj)) %>%
-        mutate(year = year)
-    }
-  mat_df <- bind_rows(mat_df_list)
-  write_rds(mat_df, climfile)
-} else {
-  mat_df <- read_rds(climfile)
-}
+mat_df <- read_rds(climfile)
 
 # join bird data with climate data
 data_df <- bird_df %>%
